@@ -1,8 +1,9 @@
 
-export type Category = 'Gala' | 'Casual' | 'Deportiva' | 'Dormir' | 'Jeans' | 'Shorts';
+export type Category = 'Gala' | 'Casual' | 'Deportiva' | 'Dormir' | 'Jeans' | 'Shorts' | 'Accesorios';
 export type Season = 'Primavera/Verano' | 'Otoño/Invierno';
-export type PieceType = 'Superior' | 'Inferior' | 'Completo';
+export type PieceType = 'Superior' | 'Inferior' | 'Completo' | 'Accesorio';
 export type Angle = 'Frente' | 'Espalda' | 'Lado' | '45 Grados';
+export type Pose = 'Estándar' | 'Caminando' | 'Mano en Cadera' | 'Sentada Elegante' | 'Mirada sobre Hombro';
 
 export interface Persona {
   height: string;
@@ -21,6 +22,7 @@ export interface ClothingItem {
   description: string;
   basePrompt: string;
   thumbnail: string;
+  subCategory?: string;
 }
 
 export interface GalleryItem {
@@ -28,4 +30,21 @@ export interface GalleryItem {
   url: string;
   outfitDetails: string;
   timestamp: string;
+  angle: Angle;
+  pose: Pose;
+}
+
+export interface UserProfile {
+  username: string;
+  password?: string;
+  gallery: GalleryItem[];
+  referenceImg: string | null;
+}
+
+export interface MakeupState {
+  eyeshadow: string;
+  lipstick: string;
+  lipstickFinish: 'mate' | 'brillante' | 'metálico';
+  lipContour: string;
+  blush: string;
 }

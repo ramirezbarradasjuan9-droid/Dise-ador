@@ -1,6 +1,6 @@
 
 import { GoogleGenAI } from "@google/genai";
-import { Persona, ClothingItem, Angle } from "../types";
+import { Persona, ClothingItem, Angle, Pose, MakeupState } from "../types";
 
 export class GeminiService {
   async generateOutfitPreview(
@@ -8,61 +8,93 @@ export class GeminiService {
     top: ClothingItem | null, 
     bottom: ClothingItem | null, 
     full: ClothingItem | null,
-    topColor: string,
-    bottomColor: string,
-    fullColor: string,
+    accessories: ClothingItem[],
+    colors: { top: string, bottom: string, full: string },
     angle: Angle,
-    referenceBase64: string
+    pose: Pose,
+    referenceBase64: string,
+    makeup: MakeupState
   ): Promise<string> {
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     
     let outfitDescription = "";
     if (full) {
-      outfitDescription = `a ${full.basePrompt} in ${fullColor} color`;
+      outfitDescription = `a ${full.basePrompt} in ${colors.full} color`;
     } else {
-      const topPart = top ? `${top.basePrompt} in ${topColor} color` : "no top";
-      const bottomPart = bottom ? `${bottom.basePrompt} in ${bottomColor} color` : "no bottom";
+      const topPart = top ? `${top.basePrompt} in ${colors.top} color` : "no top";
+      const bottomPart = bottom ? `${bottom.basePrompt} in ${colors.bottom} color` : "no bottom";
       outfitDescription = `a combination of ${topPart} and ${bottomPart}`;
     }
 
+    const accessoriesText = accessories.length > 0 
+      ? `Accessoring with: ${accessories.map(a => a.basePrompt).join(', ')}.`
+      : "No accessories.";
+
+    const makeupText = `FACE MAKEUP: Apply ${makeup.eyeshadow} eyeshadow style. 
+    LIP MAKEUP: Apply ${makeup.lipstick} with a ${makeup.lipstickFinish} finish and ${makeup.lipContour} contouring style. 
+    CHEEK MAKEUP: Apply ${makeup.blush} blush.`;
+
     const stylingPrompt = `
-      PHOTO EDITING TASK:
-      IDENTITY: Use the exact person from the attached photo. Maintain her face, 1.60m height, morena skin, and long black hair perfectly.
+      ULTRA-HIGH FASHION PHOTOMANIPULATION:
+      MODEL IDENTITY: Use the EXACT woman from the photo. Keep her ${persona.height} stature, ${persona.skin} skin, and ${persona.hair}.
       CLOTHING: She is wearing ${outfitDescription}.
-      CAMERA ANGLE: Show her from a ${angle} view.
-      QUALITY: Photorealistic fashion shot, 8k, professional studio lighting.
-      INSTRUCTION: Replace her original clothes with the specified ones. Ensure the fit matches her slim but curved body type.
+      ACCESSORIES: ${accessoriesText}
+      ${makeupText}
+      POSE & ANGLE: Model is in a ${pose} pose, viewed from the ${angle}.
+      SCENE: High-end professional fashion studio or luxury runway.
+      QUALITY: 8k resolution, cinematic lighting, Vogue magazine style, photorealistic.
+      INSTRUCTION: Replace her current attire with this specified outfit and apply the specified makeup. Full body shot.
     `;
 
     try {
-      const parts: any[] = [
-        { text: stylingPrompt },
-        {
-          inlineData: {
-            mimeType: "image/jpeg",
-            data: referenceBase64.includes(',') ? referenceBase64.split(',')[1] : referenceBase64
-          }
-        }
-      ];
-
       const response = await ai.models.generateContent({
         model: 'gemini-2.5-flash-image',
-        contents: { parts },
-        config: {
-          imageConfig: {
-            aspectRatio: "9:16"
-          }
-        }
+        contents: { parts: [{ text: stylingPrompt }, { inlineData: { mimeType: "image/jpeg", data: referenceBase64.split(',')[1] } }] },
+        config: { imageConfig: { aspectRatio: "9:16" } }
       });
 
       const imagePart = response.candidates?.[0]?.content?.parts?.find(p => p.inlineData);
-      if (imagePart?.inlineData) {
-        return `data:image/png;base64,${imagePart.inlineData.data}`;
-      }
-
-      throw new Error("No image part found in response");
+      return imagePart?.inlineData ? `data:image/png;base64,${imagePart.inlineData.data}` : "";
     } catch (error) {
       console.error("Gemini AI Error:", error);
+      throw error;
+    }
+  }
+
+  async getExpertAdvice(persona: Persona): Promise<string> {
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const prompt = `Actúa como un diseñador de moda de alta gama. Basado en este perfil: 
+    Estatura: ${persona.height}, Cabello: ${persona.hair}, Piel: ${persona.skin}, Complexión: ${persona.build}.
+    Danos 3 consejos breves y elegantes sobre qué colores le favorecen, qué tipo de cortes (rayas verticales vs horizontales, etc.) y qué estilos de gala le harían lucir espectacular. Sé profesional y motivador. Responde en español de forma concisa.`;
+
+    try {
+      const response = await ai.models.generateContent({
+        model: 'gemini-3-flash-preview',
+        contents: prompt
+      });
+      return response.text || "No se pudo obtener el consejo en este momento.";
+    } catch (error) {
+      return "Error al conectar con el diseñador virtual.";
+    }
+  }
+
+  async generateCustomDesign(prompt: string): Promise<string> {
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const fullPrompt = `HIGH FASHION DESIGN SKETCH: A professional fashion design of ${prompt}. 
+    Style: Minimalist luxury background, 8k resolution, cinematic lighting, studio photography, sharp details. 
+    Focus: The clothing item should be the main subject. No face needed, just a mannequin or professional headless model.`;
+
+    try {
+      const response = await ai.models.generateContent({
+        model: 'gemini-2.5-flash-image',
+        contents: { parts: [{ text: fullPrompt }] },
+        config: { imageConfig: { aspectRatio: "3:4" } }
+      });
+
+      const imagePart = response.candidates?.[0]?.content?.parts?.find(p => p.inlineData);
+      return imagePart?.inlineData ? `data:image/png;base64,${imagePart.inlineData.data}` : "";
+    } catch (error) {
+      console.error("Gemini Design Generation Error:", error);
       throw error;
     }
   }

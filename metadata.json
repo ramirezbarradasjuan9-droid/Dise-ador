@@ -2,6 +2,7 @@
   "name": "Gala Vision: Simulador de Identidad",
   "description": "Atelier digital avanzado que utiliza fotos de referencia para adaptar diseños de alta costura a características físicas específicas.",
   "requestFramePermissions": [
-    "camera"
+    "camera",
+    "microphone"
   ]
 }
