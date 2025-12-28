@@ -19,35 +19,36 @@ export class GeminiService {
   ): Promise<string> {
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     
+    // Extraer data base64 pura
     const base64Data = referenceBase64.includes(',') ? referenceBase64.split(',')[1] : referenceBase64;
 
     let outfitDescription = "";
     if (full) {
-      outfitDescription = `la prenda de alta costura "${full.name}" (${full.basePrompt}) en tonalidad ${colors.full}`;
+      outfitDescription = `el vestido de gala "${full.name}" (${full.basePrompt}) en color ${colors.full}`;
     } else {
       const topPart = top ? `${top.basePrompt} en color ${colors.top}` : "su torso original";
       const bottomPart = bottom ? `${bottom.basePrompt} en color ${colors.bottom}` : "su parte inferior original";
-      outfitDescription = `el conjunto de ${topPart} y ${bottomPart}`;
+      outfitDescription = `un conjunto de ${topPart} y ${bottomPart}`;
     }
 
     const accessoriesText = accessories.length > 0 
-      ? `Accesorios adicionales: ${accessories.map(a => a.name).join(', ')}.`
-      : "Sin accesorios externos.";
+      ? `Accesorios: ${accessories.map(a => a.name).join(', ')}.`
+      : "Sin accesorios.";
 
-    const makeupText = `LOOK: Labios ${makeup.lipstick} ${makeup.lipstickFinish}, sombras ${makeup.eyeshadow}.`;
+    const makeupText = `ESTILISMO: Labios ${makeup.lipstick} ${makeup.lipstickFinish}, sombras ${makeup.eyeshadow}.`;
 
-    // PROMPT DE PRESERVACIÓN RADICAL DE IDENTIDAD
+    // PROTOCOLO DE IDENTIDAD NIVEL MASTER - PROHIBIDO ALTERAR EL ROSTRO
     const radicalIdentityPrompt = `
-      STRICT IDENTITY PRESERVATION PROTOCOL (MASTER LEVEL):
-      1. SUJETO PRIMARIO: La persona en la imagen de referencia DEBE permanecer 100% IDÉNTICA. 
-      2. ROSTRO Y RASGOS: Mantén cada pixel de sus rasgos faciales, ojos, nariz, boca y expresión original. No suavices, no cambies etnia, no modifiques la edad.
-      3. FISIOLOGÍA: Conserva el tono de piel exacto ("${persona.skin}"), la textura del cabello y color ("${persona.hair}") y la estética corporal completa.
-      4. INTERVENCIÓN: Actúa exclusivamente como un sistema de superposición de ropa (Digital Try-On). Coloca ${outfitDescription} sobre el cuerpo del sujeto.
-      5. ESTILISMO: Integra ${accessoriesText} y el maquillaje ${makeupText} respetando la base facial original.
-      6. ENTORNO: Iluminación de estudio profesional (${lighting}), 8k resolution, fotorrealismo extremo, estilo cinematográfico.
-      7. POSICIÓN: Adapta el ángulo a ${angle} y la pose a ${pose} pero SIN ALTERAR la fisionomía del sujeto.
-
-      REGLA INQUEBRANTABLE: Si el rostro o la piel de la persona resultante no son 100% iguales a la foto de referencia, el render es un fallo. Cero modificaciones de identidad.
+      ULTRA-HIGH FIDELITY IDENTITY PRESERVATION (NO ALTERATIONS ALLOWED):
+      1. SUJETO: La persona en la imagen adjunta es el MODELO ÚNICO.
+      2. ROSTRO: Conserva el 100% de los rasgos faciales originales. Ojos, nariz, boca y forma de la cara deben ser IDÉNTICOS a la referencia. No modifiques la expresión ni la edad.
+      3. PIEL Y CUERPO: Mantén el tono de piel exacto ("${persona.skin}") y la complexión física original. No cambies la fisionomía corporal.
+      4. CABELLO: Conserva la textura y color de cabello original ("${persona.hair}").
+      5. VESTIMENTA: Superpone digitalmente ${outfitDescription} sobre el cuerpo de la persona.
+      6. COMPLEMENTOS: Añade ${accessoriesText} y aplica el maquillaje: ${makeupText}.
+      7. CALIDAD: Renderizado cinematográfico 8k, iluminación ${lighting}, fotorrealismo extremo estilo revista de alta costura.
+      
+      IMPORTANTE: Si el rostro resultante no es exactamente el de la foto original, el resultado no es válido. La identidad debe ser 100% reconocible y original.
     `;
 
     try {
@@ -67,14 +68,14 @@ export class GeminiService {
       });
 
       const candidate = response.candidates?.[0];
-      if (!candidate) throw new Error("No output candidate");
+      if (!candidate) throw new Error("Error: No se pudo generar la imagen.");
 
       const imagePart = candidate.content?.parts?.find(p => p.inlineData);
-      if (!imagePart?.inlineData?.data) throw new Error("Missing image binary");
+      if (!imagePart?.inlineData?.data) throw new Error("Error: Los datos de imagen están incompletos.");
 
       return `data:image/png;base64,${imagePart.inlineData.data}`;
     } catch (error) {
-      console.error("Gemini Render Engine Error:", error);
+      console.error("AI Engine Failure:", error);
       throw error;
     }
   }
@@ -84,10 +85,10 @@ export class GeminiService {
     try {
       const response = await ai.models.generateContent({
         model: 'gemini-3-flash-preview',
-        contents: `Analiza este perfil de alta costura: ${JSON.stringify(persona)}. Proporciona 3 breves recomendaciones de diseño cinematográfico.`
+        contents: `Analiza este perfil: ${JSON.stringify(persona)}. Danos 3 consejos de estilo para gala nocturna.`
       });
-      return response.text || "Consejos no disponibles.";
-    } catch (error) { return "Error de análisis."; }
+      return response.text || "No hay consejos disponibles.";
+    } catch (error) { return "Error."; }
   }
 }
 

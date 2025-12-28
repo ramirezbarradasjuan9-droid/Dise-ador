@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { CATALOGO, POSES, ANGLES, MAKEUP_EYESHADOWS, MI_PERFIL } from './constants';
 import { ClothingItem, Category, Angle, Pose, GalleryItem, UserProfile, MakeupState } from './types';
 import { geminiService } from './services/geminiService';
@@ -44,6 +44,8 @@ export default function App() {
   const [currentView, setCurrentView] = useState<string | null>(null);
   const [angle, setAngle] = useState<Angle>('Frente');
   const [pose, setPose] = useState<Pose>('Estándar');
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const filteredCatalog = useMemo(() => CATALOGO.filter(item => item.category === activeCategory), [activeCategory]);
   const currentItems = filteredCatalog.slice(catalogPage * itemsPerPage, (catalogPage + 1) * itemsPerPage);
@@ -91,14 +93,24 @@ export default function App() {
     const file = e.target.files?.[0];
     if (file && currentUser) {
       const reader = new FileReader();
+      reader.onloadstart = () => setIsGenerating(true);
       reader.onloadend = () => {
         const base64 = reader.result as string;
         const usersStr = localStorage.getItem('gala_vision_users');
         const users = usersStr ? JSON.parse(usersStr) : {};
         const updatedUser = { ...currentUser, referenceImg: base64 };
+        
+        // Actualizar almacenamiento persistente
         users[currentUser.username] = updatedUser;
         localStorage.setItem('gala_vision_users', JSON.stringify(users));
+        
+        // Actualizar estado local inmediatamente
         setCurrentUser(updatedUser);
+        setIsGenerating(false);
+      };
+      reader.onerror = () => {
+        alert("Error al cargar la imagen. Intenta con otro archivo.");
+        setIsGenerating(false);
       };
       reader.readAsDataURL(file);
     }
@@ -121,8 +133,8 @@ export default function App() {
   };
 
   const handleSimulate = async () => {
-    if (!currentUser?.referenceImg) return alert("Por favor, sube tu foto de referencia en 'IDENTIDAD ACTUAL'.");
-    if (!selectedFull && !selectedTop) return alert("Elige un diseño del Lookbook para simular.");
+    if (!currentUser?.referenceImg) return alert("Por favor, sube tu foto de referencia para conservar tu identidad.");
+    if (!selectedFull && !selectedTop) return alert("Selecciona un diseño del catálogo.");
     
     setIsGenerating(true);
     setIsStageOpen(true);
@@ -140,7 +152,7 @@ export default function App() {
         const newItem: GalleryItem = {
           id: Date.now().toString(),
           url,
-          outfitDetails: `${selectedFull?.name || 'Composición Personalizada'}`,
+          outfitDetails: `${selectedFull?.name || 'Look Personalizado'}`,
           timestamp: new Date().toLocaleString(),
           angle,
           pose,
@@ -152,7 +164,7 @@ export default function App() {
         setCurrentUser(updatedUser);
       }
     } catch (e) {
-      alert("Error en el motor de renderizado. Intenta con una foto más clara.");
+      alert("Error en la simulación. Asegúrate de que la foto de tu rostro sea clara.");
       setIsStageOpen(false);
     } finally {
       setIsGenerating(false);
@@ -168,8 +180,8 @@ export default function App() {
   if (showWelcome) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center p-6">
-        <div className="max-w-md w-full glass p-10 rounded-[3rem] border border-amber-500/20 text-center animate-fade">
-          <div className="w-16 h-16 bg-amber-500 rounded-2xl mx-auto flex items-center justify-center mb-6">
+        <div className="max-w-md w-full glass p-10 rounded-[3.5rem] border border-amber-500/20 text-center animate-fade shadow-[0_0_80px_rgba(0,0,0,1)]">
+          <div className="w-16 h-16 bg-amber-500 rounded-2xl mx-auto flex items-center justify-center mb-6 shadow-2xl">
             <span className="text-black text-3xl font-serif font-bold">G</span>
           </div>
           <h1 className="text-2xl font-serif gold-text tracking-[0.4em] uppercase mb-8">Gala Vision</h1>
@@ -177,10 +189,10 @@ export default function App() {
             <input type="text" placeholder="Usuario" required className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-sm outline-none focus:border-amber-500/50" value={authForm.username} onChange={e => setAuthForm({...authForm, username: e.target.value})} />
             <input type="password" placeholder="Contraseña" required className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-sm outline-none focus:border-amber-500/50" value={authForm.password} onChange={e => setAuthForm({...authForm, password: e.target.value})} />
             {authError && <p className="text-xs text-red-500 font-bold">{authError}</p>}
-            <button className="w-full btn-gold py-5 rounded-2xl text-black font-bold uppercase tracking-widest text-xs mt-4">Entrar al Atelier</button>
+            <button className="w-full btn-gold py-5 rounded-2xl text-black font-bold uppercase tracking-widest text-xs mt-4 shadow-xl">Entrar al Atelier</button>
           </form>
-          <button onClick={() => setIsLoginView(!isLoginView)} className="mt-8 text-[10px] text-neutral-500 uppercase font-bold tracking-widest">
-            {isLoginView ? '¿No tienes cuenta? Regístrate' : 'Regresar al Login'}
+          <button onClick={() => setIsLoginView(!isLoginView)} className="mt-8 text-[10px] text-neutral-500 uppercase font-bold tracking-widest hover:text-white transition-colors">
+            {isLoginView ? '¿Nuevo aquí? Regístrate' : 'Ya tengo cuenta'}
           </button>
         </div>
       </div>
@@ -188,69 +200,77 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-[#020202] text-white flex flex-col font-sans selection:bg-amber-500/30">
+    <div className="min-h-screen bg-[#010101] text-white flex flex-col font-sans selection:bg-amber-500/30">
       {/* HEADER */}
-      <header className="h-20 glass border-b border-white/5 flex items-center justify-between px-6 lg:px-12 sticky top-0 z-[60]">
+      <header className="h-20 glass border-b border-white/5 flex items-center justify-between px-6 lg:px-12 sticky top-0 z-[100] shadow-2xl">
         <div className="flex items-center gap-4">
-          <div className="w-10 h-10 rounded-xl bg-amber-500 flex items-center justify-center font-serif font-bold text-black text-xl shadow-[0_0_15px_rgba(212,175,55,0.4)]">G</div>
-          <h1 className="text-xs font-serif gold-text tracking-widest uppercase hidden sm:block">Atelier Cinematográfico Gala Vision</h1>
+          <div className="w-10 h-10 rounded-xl bg-amber-500 flex items-center justify-center font-serif font-bold text-black text-xl shadow-[0_0_20px_rgba(212,175,55,0.4)]">G</div>
+          <h1 className="text-xs font-serif gold-text tracking-widest uppercase hidden sm:block">Atelier Digital Gala Vision</h1>
         </div>
-        <nav className="flex items-center gap-3">
+        <nav className="flex items-center gap-2">
           {(['Lookbook', 'Gallery'] as const).map(tab => (
             <button key={tab} onClick={() => setActiveTab(tab)} className={`px-6 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all ${activeTab === tab ? 'bg-amber-500 text-black shadow-lg shadow-amber-500/20' : 'text-neutral-500 hover:text-white'}`}>
-              {tab === 'Lookbook' ? '📖 Colecciones' : '🖼️ Mi Galería'}
+              {tab === 'Lookbook' ? '📖 Colecciones' : '🖼️ Galería'}
             </button>
           ))}
-          <div className="w-px h-6 bg-white/10 mx-1" />
+          <div className="w-px h-6 bg-white/10 mx-2" />
           <button onClick={logout} className="text-[10px] font-bold text-neutral-600 hover:text-red-500 uppercase px-3">Salir</button>
         </nav>
       </header>
 
       <main className="flex-grow flex flex-col lg:grid lg:grid-cols-12 overflow-hidden">
         
-        {/* PANEL IZQUIERDO: GESTIÓN DE IDENTIDAD */}
-        <aside className="lg:col-span-3 border-r border-white/5 bg-[#050505] flex flex-col overflow-y-auto no-scrollbar p-6 space-y-10">
+        {/* PANEL IZQUIERDO: MASTER IDENTITY MONITOR */}
+        <aside className="lg:col-span-3 border-r border-white/5 bg-[#050505] flex flex-col overflow-y-auto no-scrollbar p-6 space-y-10 shadow-2xl">
           <div className="space-y-6">
             <div className="flex items-center justify-between">
-              <h3 className="text-[10px] uppercase font-bold text-amber-500 tracking-widest">Identidad Actual</h3>
-              <label className="text-[9px] font-bold text-white/40 hover:text-amber-500 cursor-pointer transition-colors flex items-center gap-1 uppercase">
-                <span className="text-xs">🔄</span> Cambiar
-                <input type="file" onChange={handleFileUpload} className="hidden" accept="image/*" />
-              </label>
+              <h3 className="text-[10px] uppercase font-bold text-amber-500 tracking-widest">Monitor de Identidad</h3>
+              {currentUser?.referenceImg && (
+                <button 
+                  onClick={() => fileInputRef.current?.click()}
+                  className="text-[9px] font-bold text-amber-500/60 hover:text-amber-500 flex items-center gap-1 uppercase transition-all"
+                >
+                  <span className="text-xs">🔄</span> Actualizar
+                </button>
+              )}
             </div>
             
-            <div className="aspect-[4/5] rounded-[2.5rem] overflow-hidden bg-neutral-900 border border-white/10 relative group shadow-2xl">
+            <div 
+              className={`aspect-[4/5] rounded-[3rem] overflow-hidden bg-neutral-900 border-2 relative group shadow-[0_0_40px_rgba(0,0,0,0.8)] transition-all ${currentUser?.referenceImg ? 'border-white/10' : 'border-dashed border-white/20 hover:border-amber-500/30'}`}
+              onClick={() => !currentUser?.referenceImg && fileInputRef.current?.click()}
+            >
               {currentUser?.referenceImg ? (
-                <img src={currentUser.referenceImg} className="w-full h-full object-cover grayscale-[20%] group-hover:grayscale-0 transition-all duration-700" />
+                <div className="relative w-full h-full">
+                  <img src={currentUser.referenceImg} className="w-full h-full object-cover animate-in fade-in duration-500" alt="Identity" />
+                  {/* Overlay de Escaneo Master */}
+                  <div className="absolute inset-0 pointer-events-none">
+                    <div className="absolute top-0 left-0 right-0 h-[2px] bg-amber-500/20 animate-scan shadow-[0_0_10px_rgba(212,175,55,0.5)]" />
+                    <div className="absolute inset-0 border border-amber-500/10" />
+                  </div>
+                </div>
               ) : (
-                <label className="absolute inset-0 flex flex-col items-center justify-center cursor-pointer p-8 text-center text-neutral-600 hover:text-amber-500 transition-colors">
-                  <span className="text-4xl mb-4">📸</span>
-                  <p className="text-[9px] font-bold uppercase tracking-[0.2em] leading-loose">Sube tu foto de referencia<br/>(Rasgos conservados 100%)</p>
-                  <input type="file" onChange={handleFileUpload} className="hidden" accept="image/*" />
-                </label>
+                <div className="absolute inset-0 flex flex-col items-center justify-center p-8 text-center cursor-pointer">
+                  <span className="text-4xl mb-4 grayscale opacity-40">📸</span>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-neutral-600 leading-relaxed">
+                    Sube tu foto de referencia<br/>
+                    <span className="text-amber-500/40 font-light text-[8px] mt-2 block italic">Preservación de rasgos al 100%</span>
+                  </p>
+                </div>
               )}
-              {/* Overlay de Escaneo Cinematográfico */}
-              <div className="absolute inset-0 pointer-events-none border-[1px] border-white/5">
-                 <div className="absolute top-4 left-4 w-4 h-4 border-t border-l border-amber-500/30" />
-                 <div className="absolute top-4 right-4 w-4 h-4 border-t border-r border-amber-500/30" />
-                 <div className="absolute bottom-4 left-4 w-4 h-4 border-b border-l border-amber-500/30" />
-                 <div className="absolute bottom-4 right-4 w-4 h-4 border-b border-r border-amber-500/30" />
-              </div>
+              <input type="file" ref={fileInputRef} onChange={handleFileUpload} className="hidden" accept="image/*" />
             </div>
           </div>
 
           <div className="space-y-4">
-            <h3 className="text-[10px] uppercase font-bold text-amber-500 tracking-widest">Composición de Look</h3>
+            <h3 className="text-[10px] uppercase font-bold text-amber-500 tracking-widest">Configuración Actual</h3>
             <div className="space-y-2">
-              <div className="p-4 bg-white/5 rounded-2xl border border-white/5 flex flex-col gap-1">
-                <span className="text-[8px] text-neutral-600 font-bold uppercase tracking-widest">Base</span>
-                <span className="text-[11px] font-bold text-white truncate">{selectedFull?.name || selectedTop?.name || 'Vacio'}</span>
+              <div className="p-4 bg-white/5 rounded-2xl border border-white/5 flex flex-col gap-1 shadow-inner">
+                <span className="text-[8px] text-neutral-600 font-bold uppercase tracking-widest">Outfit Elegido</span>
+                <span className="text-[11px] font-bold text-white truncate">{selectedFull?.name || selectedTop?.name || 'Esperando selección...'}</span>
               </div>
-              <div className="p-4 bg-white/5 rounded-2xl border border-white/5 flex flex-col gap-1">
-                <span className="text-[8px] text-neutral-600 font-bold uppercase tracking-widest">Complementos</span>
-                <span className="text-[10px] font-medium text-white/50">
-                    {selectedAccessories.length > 0 ? selectedAccessories.map(a => a.name).join(', ') : 'Ninguno'}
-                </span>
+              <div className="p-4 bg-white/5 rounded-2xl border border-white/5 flex flex-col gap-1 shadow-inner">
+                <span className="text-[8px] text-neutral-600 font-bold uppercase tracking-widest">Atmósfera</span>
+                <span className="text-[10px] font-medium text-white/40">{selectedLighting}</span>
               </div>
             </div>
           </div>
@@ -258,27 +278,27 @@ export default function App() {
           <button 
             onClick={handleSimulate} 
             disabled={isGenerating || !currentUser?.referenceImg}
-            className="w-full btn-gold py-6 rounded-3xl text-black font-bold uppercase tracking-[0.3em] text-[10px] shadow-2xl transition-all hover:translate-y-[-2px] active:translate-y-1"
+            className={`w-full py-6 rounded-3xl text-black font-bold uppercase tracking-[0.3em] text-[10px] shadow-2xl transition-all ${isGenerating || !currentUser?.referenceImg ? 'bg-neutral-800 text-neutral-600 cursor-not-allowed opacity-50' : 'btn-gold hover:scale-[1.02] active:scale-95'}`}
           >
-            {isGenerating ? 'Calculando Geometría...' : '✨ Generar Simulación'}
+            {isGenerating ? <span className="animate-pulse">Procesando Look...</span> : '✨ Revelar Mi Look'}
           </button>
         </aside>
 
         {/* CONTENIDO CENTRAL */}
-        <section className="lg:col-span-9 bg-[#020202] overflow-y-auto no-scrollbar p-6 lg:p-12 relative">
+        <section className="lg:col-span-9 bg-[#020202] overflow-y-auto no-scrollbar p-6 lg:p-12">
           {activeTab === 'Lookbook' ? (
             <div className="max-w-6xl mx-auto space-y-12">
               <div className="flex flex-col md:flex-row justify-between items-end gap-6 border-b border-white/5 pb-10">
                 <div>
-                  <h2 className="text-5xl font-serif gold-text tracking-tight">Atelier Digital</h2>
-                  <p className="text-[10px] text-neutral-500 uppercase tracking-[0.4em] font-bold mt-4">Diseños de gala y alta costura nocturna</p>
+                  <h2 className="text-5xl font-serif gold-text tracking-tighter">Lookbook Nocturno</h2>
+                  <p className="text-[10px] text-neutral-500 uppercase tracking-[0.4em] font-bold mt-4">Simulador de alta costura para noche de gala</p>
                 </div>
                 <div className="flex bg-white/5 p-1 rounded-full border border-white/10 overflow-x-auto no-scrollbar">
                   {(['Gala', 'Casual', 'Accesorios'] as Category[]).map(cat => (
                     <button 
                       key={cat} 
                       onClick={() => { setActiveCategory(cat); setCatalogPage(0); }}
-                      className={`px-8 py-2.5 rounded-full text-[9px] font-bold uppercase tracking-widest transition-all ${activeCategory === cat ? 'bg-white text-black shadow-xl shadow-white/10' : 'hover:text-amber-500 text-neutral-500'}`}
+                      className={`px-10 py-3 rounded-full text-[9px] font-bold uppercase tracking-widest transition-all ${activeCategory === cat ? 'bg-white text-black shadow-2xl' : 'hover:text-amber-500 text-neutral-500'}`}
                     >
                       {cat}
                     </button>
@@ -292,16 +312,16 @@ export default function App() {
                   return (
                     <div 
                       key={item.id} 
-                      className={`group relative bg-neutral-900 rounded-[3rem] overflow-hidden border-2 transition-all cursor-pointer shadow-2xl ${isSelected ? 'border-amber-500 scale-[0.98]' : 'border-white/5 hover:border-white/20'}`}
+                      className={`group relative magazine-page bg-neutral-900 rounded-[3.5rem] overflow-hidden border-2 transition-all cursor-pointer shadow-[0_0_50px_rgba(0,0,0,0.5)] ${isSelected ? 'border-amber-500 scale-[0.98]' : 'border-white/5 hover:border-white/20'}`}
                       style={{ animationDelay: `${idx * 150}ms` }}
                       onClick={() => toggleSelection(item)}
                     >
-                      <img src={item.thumbnail} className="w-full aspect-[4/5] object-cover transition-transform duration-1000 group-hover:scale-105 opacity-80 group-hover:opacity-100" />
+                      <img src={item.thumbnail} className="w-full aspect-[4/5] object-cover transition-transform duration-1000 group-hover:scale-105" alt={item.name} />
                       <div className="absolute inset-0 bg-gradient-to-t from-black via-black/10 to-transparent p-12 flex flex-col justify-end">
-                        <span className="text-[9px] text-amber-500 font-bold uppercase tracking-widest mb-4">{item.category}</span>
-                        <h4 className="text-3xl font-serif text-white mb-4 leading-tight">{item.name}</h4>
-                        <div className={`w-full py-4 rounded-2xl text-[9px] font-bold uppercase tracking-widest text-center transition-all ${isSelected ? 'bg-amber-500 text-black' : 'bg-white/10 backdrop-blur-md text-white border border-white/10'}`}>
-                          {isSelected ? '✓ Seleccionado' : 'Añadir al Look'}
+                        <span className="text-[10px] text-amber-500 font-bold uppercase tracking-widest mb-4">{item.category}</span>
+                        <h4 className="text-3xl font-serif text-white mb-4 leading-none">{item.name}</h4>
+                        <div className={`w-full py-4 rounded-2xl text-[9px] font-bold uppercase tracking-widest text-center transition-all ${isSelected ? 'bg-amber-500 text-black shadow-lg shadow-amber-500/20' : 'bg-white/10 backdrop-blur-md text-white border border-white/10'}`}>
+                          {isSelected ? '✓ Seleccionado' : 'Añadir al Diseño'}
                         </div>
                       </div>
                     </div>
@@ -310,21 +330,21 @@ export default function App() {
               </div>
 
               <div className="pt-12 flex items-center justify-between border-t border-white/5">
-                <button disabled={catalogPage === 0} onClick={() => setCatalogPage(p => p - 1)} className="w-14 h-14 rounded-full glass border border-white/10 flex items-center justify-center text-xl transition-all disabled:opacity-10">←</button>
-                <span className="text-lg font-serif gold-text tracking-[0.2em]">Página {catalogPage + 1} de {Math.ceil(filteredCatalog.length / itemsPerPage)}</span>
-                <button disabled={(catalogPage + 1) * itemsPerPage >= filteredCatalog.length} onClick={() => setCatalogPage(p => p + 1)} className="w-14 h-14 rounded-full glass border border-white/10 flex items-center justify-center text-xl transition-all disabled:opacity-10">→</button>
+                <button disabled={catalogPage === 0} onClick={() => setCatalogPage(p => p - 1)} className="w-16 h-16 rounded-full glass border border-white/10 flex items-center justify-center text-xl hover:bg-white/5 transition-all disabled:opacity-10">←</button>
+                <span className="text-lg font-serif gold-text tracking-widest">Página {catalogPage + 1} / {Math.ceil(filteredCatalog.length / itemsPerPage)}</span>
+                <button disabled={(catalogPage + 1) * itemsPerPage >= filteredCatalog.length} onClick={() => setCatalogPage(p => p + 1)} className="w-16 h-16 rounded-full glass border border-white/10 flex items-center justify-center text-xl hover:bg-white/5 transition-all disabled:opacity-10">→</button>
               </div>
             </div>
           ) : (
             <div className="max-w-6xl mx-auto space-y-12">
-              <h2 className="text-4xl font-serif gold-text border-b border-white/5 pb-10">Archivo de Simulaciones Master</h2>
+              <h2 className="text-4xl font-serif gold-text border-b border-white/5 pb-10">Galería de Diseños Guardados</h2>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
                 {currentUser?.gallery.map(item => (
                   <div key={item.id} className="group relative aspect-[3/4] rounded-3xl overflow-hidden border border-white/5 bg-neutral-900 cursor-pointer shadow-xl" onClick={() => { setCurrentView(item.url); setIsStageOpen(true); }}>
-                    <img src={item.url} className="w-full h-full object-cover transition-transform group-hover:scale-105" />
+                    <img src={item.url} className="w-full h-full object-cover transition-transform group-hover:scale-105" alt="Diseño guardado" />
                     <div className="absolute inset-0 bg-black/70 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center p-6 text-center">
-                       <span className="text-[8px] font-bold uppercase tracking-[0.3em] text-amber-500 mb-2">{item.outfitDetails}</span>
-                       <span className="text-[7px] font-mono text-white/50 uppercase">{item.timestamp}</span>
+                       <span className="text-[9px] font-bold uppercase tracking-[0.2em] text-amber-500 mb-2">{item.outfitDetails}</span>
+                       <span className="text-[8px] font-mono text-white/40 uppercase">{item.timestamp}</span>
                     </div>
                   </div>
                 ))}
@@ -334,45 +354,44 @@ export default function App() {
         </section>
       </main>
 
-      {/* MODAL SIMULADOR: STUDIO REFERENCE MONITOR */}
+      {/* MODAL SIMULADOR: STUDIO RENDER MONITOR */}
       {isStageOpen && (
-        <div className="fixed inset-0 z-[100] bg-[#010101] flex flex-col animate-in fade-in duration-500">
-          {/* Studio Top Bar */}
-          <header className="h-16 border-b border-white/10 px-8 flex items-center justify-between bg-black/40 backdrop-blur-xl">
+        <div className="fixed inset-0 z-[100] bg-[#010101] flex flex-col animate-in fade-in duration-700">
+          {/* Render Top Bar */}
+          <header className="h-16 border-b border-white/10 px-8 flex items-center justify-between bg-black/40 backdrop-blur-2xl">
             <div className="flex items-center gap-8">
               <div className="flex items-center gap-3">
-                 <span className="w-2.5 h-2.5 rounded-full bg-red-600 animate-pulse shadow-[0_0_10px_rgba(220,38,38,0.5)]" />
-                 <span className="text-[10px] font-mono text-white uppercase tracking-[0.3em]">STUDIO_REF_01 // RENDERING</span>
+                 <span className="w-2.5 h-2.5 rounded-full bg-red-600 animate-pulse shadow-[0_0_15px_rgba(220,38,38,0.6)]" />
+                 <span className="text-[10px] font-mono text-white uppercase tracking-[0.4em]">RENDER_SESSION_MASTER // 8K_HDR</span>
               </div>
               <div className="hidden md:flex gap-6 text-[8px] font-mono text-neutral-600 uppercase tracking-widest border-l border-white/10 pl-6">
-                <span>IDENTITY_LOCK: TRUE</span>
-                <span>PIXEL_PRESERVE: 100%</span>
-                <span>COLOR_SPACE: ACES_CG</span>
+                <span>IDENTITY_LOCKED: 100%</span>
+                <span>COLOR: sRGB_D65</span>
               </div>
             </div>
-            <button onClick={() => { setIsStageOpen(false); setCurrentView(null); }} className="px-5 py-2 rounded-lg bg-red-600/10 hover:bg-red-600/30 text-red-500 text-[10px] font-bold transition-all uppercase tracking-widest border border-red-600/20">Finalizar Sesión</button>
+            <button onClick={() => { setIsStageOpen(false); setCurrentView(null); }} className="px-6 py-2.5 rounded-xl bg-red-600/10 hover:bg-red-600/30 text-red-500 text-[10px] font-bold transition-all uppercase tracking-widest border border-red-600/20 shadow-xl">Cerrar Sesión</button>
           </header>
           
           <div className="flex-grow flex flex-col lg:grid lg:grid-cols-12 overflow-hidden">
-            {/* Controles de Renderizado */}
+            {/* Controles de Escena */}
             <aside className="lg:col-span-3 border-r border-white/5 p-8 space-y-12 bg-[#050505] overflow-y-auto no-scrollbar shadow-inner">
               <div className="space-y-10">
                 <div>
-                  <h3 className="text-[9px] uppercase font-bold text-neutral-600 tracking-widest mb-6">Configuración de Escena</h3>
+                  <h3 className="text-[10px] uppercase font-bold text-neutral-600 tracking-widest mb-6">Ajustes del Render</h3>
                   <div className="space-y-8">
                     <div className="space-y-4">
-                      <label className="text-[8px] text-white/30 font-bold uppercase tracking-widest">Ángulo Cinematográfico</label>
+                      <label className="text-[9px] text-white/30 font-bold uppercase tracking-[0.2em]">Ángulo de Cámara</label>
                       <div className="grid grid-cols-2 gap-2">
                         {ANGLES.map(a => (
-                          <button key={a.name} onClick={() => setAngle(a.name as Angle)} className={`py-3 rounded-xl text-[9px] font-bold uppercase border transition-all ${angle === a.name ? 'bg-white text-black border-white shadow-2xl' : 'bg-white/5 border-white/5 text-neutral-500 hover:border-white/20'}`}>{a.name}</button>
+                          <button key={a.name} onClick={() => setAngle(a.name as Angle)} className={`py-3.5 rounded-xl text-[9px] font-bold uppercase border transition-all ${angle === a.name ? 'bg-white text-black border-white shadow-2xl scale-105' : 'bg-white/5 border-white/5 text-neutral-500 hover:border-white/20'}`}>{a.name}</button>
                         ))}
                       </div>
                     </div>
                     <div className="space-y-4">
-                      <label className="text-[8px] text-white/30 font-bold uppercase tracking-widest">Esquema de Iluminación</label>
+                      <label className="text-[9px] text-white/30 font-bold uppercase tracking-[0.2em]">Esquema de Luz</label>
                       <div className="space-y-2">
                         {STUDIO_LIGHTS.map(l => (
-                          <button key={l} onClick={() => setSelectedLighting(l)} className={`w-full px-4 py-3 rounded-xl text-[9px] font-bold uppercase text-left border transition-all ${selectedLighting === l ? 'bg-amber-500/10 border-amber-500/40 text-amber-500' : 'bg-transparent border-white/5 text-neutral-600 hover:text-neutral-400'}`}>{l}</button>
+                          <button key={l} onClick={() => setSelectedLighting(l)} className={`w-full px-5 py-4 rounded-xl text-[9px] font-bold uppercase text-left border transition-all ${selectedLighting === l ? 'bg-amber-500/10 border-amber-500/40 text-amber-500 shadow-inner shadow-amber-500/5' : 'bg-transparent border-white/5 text-neutral-600 hover:text-neutral-400'}`}>{l}</button>
                         ))}
                       </div>
                     </div>
@@ -380,81 +399,81 @@ export default function App() {
                 </div>
                 
                 <div>
-                  <h3 className="text-[9px] uppercase font-bold text-neutral-600 tracking-widest mb-6">Pose de Referencia</h3>
+                  <h3 className="text-[10px] uppercase font-bold text-neutral-600 tracking-widest mb-6">Pose Cinematográfica</h3>
                   <div className="space-y-2">
                     {POSES.map(p => (
-                      <button key={p.name} onClick={() => setPose(p.name as Pose)} className={`w-full px-4 py-3 rounded-xl text-[9px] font-bold uppercase text-left border transition-all ${pose === p.name ? 'bg-white/10 border-white/20 text-white' : 'bg-white/5 border-white/5 text-neutral-500'}`}>{p.name}</button>
+                      <button key={p.name} onClick={() => setPose(p.name as Pose)} className={`w-full px-5 py-4 rounded-xl text-[9px] font-bold uppercase text-left border transition-all ${pose === p.name ? 'bg-white/10 border-white/20 text-white' : 'bg-white/5 border-white/5 text-neutral-500 hover:bg-white/5'}`}>{p.name}</button>
                     ))}
                   </div>
                 </div>
               </div>
               
-              <button onClick={handleSimulate} disabled={isGenerating} className="w-full btn-gold py-6 rounded-2xl text-black font-bold uppercase text-[10px] tracking-[0.4em] shadow-2xl transition-all">
-                {isGenerating ? <span className="animate-pulse">Calculando Look...</span> : '📸 Renderizar Master'}
+              <button onClick={handleSimulate} disabled={isGenerating} className="w-full btn-gold py-6 rounded-3xl text-black font-bold uppercase text-[10px] tracking-[0.4em] shadow-[0_15px_40px_rgba(212,175,55,0.3)] transition-all hover:translate-y-[-2px]">
+                {isGenerating ? <span className="animate-pulse">Renderizando...</span> : '📸 Iniciar Render'}
               </button>
             </aside>
 
             {/* Viewport del Monitor de Referencia */}
-            <section className="lg:col-span-9 flex items-center justify-center p-4 lg:p-10 bg-[#020202] relative">
-              <div className="w-full h-full max-w-[420px] aspect-[9/16] relative bg-black rounded-[4rem] overflow-hidden shadow-[0_0_150px_rgba(0,0,0,1)] border border-white/10 flex flex-col group">
+            <section className="lg:col-span-9 flex items-center justify-center p-6 lg:p-12 bg-[#010101] relative overflow-hidden">
+              <div className="w-full h-full max-w-[430px] aspect-[9/16] relative bg-[#050505] rounded-[4.5rem] overflow-hidden shadow-[0_0_120px_rgba(0,0,0,1)] border border-white/10 flex flex-col group">
                 
                 <div className="flex-grow relative overflow-hidden bg-[#080808]">
                   {isGenerating ? (
                     <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-black/95 backdrop-blur-3xl p-12 text-center gap-10">
                       <div className="relative">
-                        <div className="w-28 h-28 border-t-[1px] border-amber-500/40 rounded-full animate-spin" />
+                        <div className="w-32 h-32 border-t-2 border-amber-500/40 rounded-full animate-spin" />
                         <div className="absolute inset-0 flex items-center justify-center font-serif text-amber-500 text-4xl italic">G</div>
                       </div>
-                      <div className="space-y-3">
-                        <p className="text-[10px] uppercase font-bold tracking-[0.5em] text-amber-500">Mapeando Identidad Master</p>
-                        <p className="text-[8px] text-neutral-600 font-mono uppercase tracking-widest">Preservando rasgos faciales al 100%</p>
-                        <p className="text-[7px] text-white/20 font-mono uppercase tracking-widest mt-4">Calculando texturas de seda 4K...</p>
+                      <div className="space-y-4">
+                        <p className="text-[11px] uppercase font-bold tracking-[0.5em] text-amber-500">Bloqueando Rasgos Faciales...</p>
+                        <p className="text-[9px] text-neutral-600 font-mono uppercase tracking-widest">Ajustando texturas al perfil de {currentUser?.username}</p>
+                        <p className="text-[8px] text-white/20 font-mono uppercase tracking-widest mt-6 animate-pulse">Sincronización de identidad: 100% segura</p>
                       </div>
                     </div>
                   ) : currentView ? (
                     <div className="w-full h-full animate-in zoom-in-95 duration-1000 relative">
-                      <img src={currentView} className="w-full h-full object-cover" />
+                      <img src={currentView} className="w-full h-full object-cover" alt="Resultado de simulación" />
                       
-                      {/* Overlay Técnico Cinematográfico */}
-                      <div className="absolute top-10 left-10 pointer-events-none opacity-40">
-                         <div className="text-[8px] font-mono text-white/60 mb-1">DATA: HIGH_FIDELITY</div>
-                         <div className="text-[8px] font-mono text-amber-500/80">LUT: GALA_PREMIUM_V3</div>
+                      {/* Marcas de Monitor Pro */}
+                      <div className="absolute top-10 left-10 pointer-events-none opacity-50">
+                         <div className="text-[9px] font-mono text-white/60 mb-2">OUTPUT_STABLE: 4K</div>
+                         <div className="text-[8px] font-mono text-amber-500">LUT_PROFILE: GALA_CINEMA_V3</div>
                       </div>
 
-                      <div className="absolute bottom-12 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-all translate-y-4 group-hover:translate-y-0">
-                        <button onClick={() => { const link = document.createElement('a'); link.href = currentView!; link.download = 'GalaVision_MasterCapture.png'; link.click(); }} className="px-10 py-4 bg-white text-black rounded-full text-[10px] font-bold uppercase tracking-[0.3em] shadow-2xl hover:bg-amber-500 transition-colors">Exportar Master</button>
+                      <div className="absolute bottom-14 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-all translate-y-4 group-hover:translate-y-0">
+                        <button onClick={() => { const link = document.createElement('a'); link.href = currentView!; link.download = 'GalaVision_MasterCapture.png'; link.click(); }} className="px-12 py-5 bg-white text-black rounded-full text-[11px] font-bold uppercase tracking-[0.3em] shadow-[0_20px_40px_rgba(255,255,255,0.2)] hover:bg-amber-500 transition-colors">Descargar Master 8K</button>
                       </div>
                     </div>
                   ) : (
-                    <div className="absolute inset-0 flex flex-col items-center justify-center p-12 text-center gap-10">
-                      <div className="w-24 h-24 rounded-[2.5rem] bg-white/5 border border-white/10 flex items-center justify-center text-4xl shadow-inner animate-pulse">✨</div>
-                      <div className="space-y-3">
-                        <p className="text-[11px] text-neutral-400 uppercase tracking-[0.4em] font-bold">Monitor de Salida</p>
-                        <p className="text-[9px] text-neutral-600 leading-relaxed max-w-[220px] uppercase font-bold">Inicia el renderizado para aplicar el diseño de gala conservando tu identidad original.</p>
+                    <div className="absolute inset-0 flex flex-col items-center justify-center p-12 text-center gap-12">
+                      <div className="w-28 h-28 rounded-[3rem] bg-white/5 border border-white/10 flex items-center justify-center text-5xl shadow-inner animate-pulse">✨</div>
+                      <div className="space-y-4">
+                        <p className="text-[12px] text-neutral-400 uppercase tracking-[0.4em] font-bold">Monitor de Referencia</p>
+                        <p className="text-[10px] text-neutral-600 leading-relaxed max-w-[240px] uppercase font-bold tracking-widest">Selecciona un diseño y haz clic en Iniciar Render para ver tu look de gala personalizado conservando tu identidad.</p>
                       </div>
                     </div>
                   )}
                 </div>
 
-                {/* Footer del Monitor */}
-                <div className="h-20 bg-black/80 backdrop-blur-md border-t border-white/10 px-10 flex items-center justify-between">
+                {/* Footer de Monitor Técnica */}
+                <div className="h-20 bg-black border-t border-white/10 px-12 flex items-center justify-between shadow-2xl">
                    <div className="flex flex-col">
-                      <span className="text-[11px] font-serif gold-text">{selectedFull?.name || 'Composición'}</span>
-                      <span className="text-[7px] font-mono text-white/30 uppercase tracking-widest">IDENTIDAD: {currentUser?.username} | ID_VERIFIED</span>
+                      <span className="text-[12px] font-serif gold-text">{selectedFull?.name || 'Composición Digital'}</span>
+                      <span className="text-[8px] font-mono text-white/30 uppercase tracking-[0.3em]">REF: {MI_PERFIL.height} | {MI_PERFIL.skin} | IDENTITY_LOCK: ACTIVE</span>
                    </div>
-                   <div className="flex gap-2">
-                      <div className="w-1.5 h-1.5 rounded-full bg-amber-500/40" />
-                      <div className="w-1.5 h-1.5 rounded-full bg-white/10" />
-                      <div className="w-1.5 h-1.5 rounded-full bg-white/10" />
+                   <div className="flex gap-2.5">
+                      <div className="w-2 h-2 rounded-full bg-amber-500/50" />
+                      <div className="w-2 h-2 rounded-full bg-white/10" />
+                      <div className="w-2 h-2 rounded-full bg-white/10" />
                    </div>
                 </div>
               </div>
               
-              {/* Corner Framing Marks */}
-              <div className="absolute top-10 left-10 w-20 h-20 border-t-2 border-l-2 border-white/10 rounded-tl-[4rem] pointer-events-none" />
-              <div className="absolute top-10 right-10 w-20 h-20 border-t-2 border-r-2 border-white/10 rounded-tr-[4rem] pointer-events-none" />
-              <div className="absolute bottom-10 left-10 w-20 h-20 border-b-2 border-l-2 border-white/10 rounded-bl-[4rem] pointer-events-none" />
-              <div className="absolute bottom-10 right-10 w-20 h-20 border-b-2 border-r-2 border-white/10 rounded-br-[4rem] pointer-events-none" />
+              {/* Cinematic Corner Accents */}
+              <div className="absolute top-12 left-12 w-24 h-24 border-t-2 border-l-2 border-white/10 rounded-tl-[5rem] pointer-events-none" />
+              <div className="absolute top-12 right-12 w-24 h-24 border-t-2 border-r-2 border-white/10 rounded-tr-[5rem] pointer-events-none" />
+              <div className="absolute bottom-12 left-12 w-24 h-24 border-b-2 border-l-2 border-white/10 rounded-bl-[5rem] pointer-events-none" />
+              <div className="absolute bottom-12 right-12 w-24 h-24 border-b-2 border-r-2 border-white/10 rounded-br-[5rem] pointer-events-none" />
             </section>
           </div>
         </div>
