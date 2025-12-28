@@ -1,49 +1,127 @@
 
-import { Persona, Outfit } from './types';
+import { Persona, ClothingItem } from './types';
 
 export const MI_PERFIL: Persona = {
   height: "1.60m",
-  hair: "Negro lacio, largo hasta la cintura, brillo sedoso",
-  skin: "Morena cálida, tono canela profundo y radiante",
-  build: "Figura estética, delgada con curvas definidas (reloj de arena)",
-  facialFeatures: "Rasgos latinos elegantes, ojos almendrados expresivos",
+  hair: "Negro lacio, largo hasta la cintura",
+  skin: "Morena cálida",
+  build: "Delgada con curvas",
+  facialFeatures: "Rasgos latinos",
 };
 
-export const CATALOGO: Outfit[] = [
+export const CATALOGO: ClothingItem[] = [
+  // GALA
   {
-    id: 'versace-glam',
-    name: 'Oro de Medianoche',
-    designer: 'Versace Modern Haute Couture',
-    style: 'Gala de Noche',
-    description: 'Vestido largo de seda líquida en color oro viejo con detalles metálicos frontales.',
-    thumbnail: 'https://images.unsplash.com/photo-1566174053879-31528523f8ae?q=80&w=400',
-    prompt: 'Liquid silk floor-length gown in antique gold, architectural draping, metallic hardware accents, daring silhouette, luxury ballroom setting.'
+    id: 'gala-1',
+    name: 'Vestido de Seda Real',
+    category: 'Gala',
+    season: 'Primavera/Verano',
+    type: 'Completo',
+    description: 'Vestido largo elegante con caída natural.',
+    basePrompt: 'elegant floor-length silk gown with a flowing silhouette',
+    thumbnail: 'https://images.unsplash.com/photo-1566174053879-31528523f8ae?w=200'
+  },
+  // CASUAL
+  {
+    id: 'top-casual-1',
+    name: 'Blusa de Lino',
+    category: 'Casual',
+    season: 'Primavera/Verano',
+    type: 'Superior',
+    description: 'Blusa fresca de cuello V.',
+    basePrompt: 'linen V-neck blouse, breathable fabric',
+    thumbnail: 'https://images.unsplash.com/photo-1551163943-3f6a855d1153?w=200'
   },
   {
-    id: 'van-herpen-tech',
-    name: 'Estructura Óptica',
-    designer: 'Iris van Herpen 2025',
-    style: 'Cóctel Vanguardista',
-    description: 'Vestido midi con texturas 3D cortadas a láser que crean un efecto de movimiento cinético.',
-    thumbnail: 'https://images.unsplash.com/photo-1539109136881-3be0616acf4b?q=80&w=400',
-    prompt: 'Avant-garde cocktail dress, laser-cut 3D organic patterns, semi-translucent material, futuristic structure, high-tech fashion studio photography.'
+    id: 'bot-casual-1',
+    name: 'Falda Midi',
+    category: 'Casual',
+    season: 'Primavera/Verano',
+    type: 'Inferior',
+    description: 'Falda a media pierna con vuelo.',
+    basePrompt: 'high-waisted midi skirt with a subtle flare',
+    thumbnail: 'https://images.unsplash.com/photo-1583496661160-fb5886a0aaaa?w=200'
+  },
+  // JEANS
+  {
+    id: 'top-shirt-1',
+    name: 'Playera Básica',
+    category: 'Casual',
+    season: 'Primavera/Verano',
+    type: 'Superior',
+    description: 'Playera de algodón premium.',
+    basePrompt: 'minimalist premium cotton t-shirt',
+    thumbnail: 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=200'
   },
   {
-    id: 'valentino-red',
-    name: 'Rubí Imperial',
-    designer: 'Valentino Red Collection',
-    style: 'Gala de Gala',
-    description: 'Vestido de tul y terciopelo en rojo carmín profundo con capa de gasa etérea.',
-    thumbnail: 'https://images.unsplash.com/photo-1518831959646-742c3a14ebf7?q=80&w=400',
-    prompt: 'Majestic ruby red silk and velvet gown, flowing cape sleeves, dramatic train, royal gala ambiance, contrasting against deep black hair.'
+    id: 'jean-1',
+    name: 'Jeans Slim Fit',
+    category: 'Jeans',
+    season: 'Otoño/Invierno',
+    type: 'Inferior',
+    description: 'Mezclilla de alta calidad ajustada.',
+    basePrompt: 'classic slim-fit denim jeans',
+    thumbnail: 'https://images.unsplash.com/photo-1542272604-787c3835535d?w=200'
+  },
+  // SHORTS
+  {
+    id: 'short-1',
+    name: 'Short de Mezclilla',
+    category: 'Shorts',
+    season: 'Primavera/Verano',
+    type: 'Inferior',
+    description: 'Short corto desflecado.',
+    basePrompt: 'distressed denim shorts',
+    thumbnail: 'https://images.unsplash.com/photo-1591195853828-11db59a44f6b?w=200'
+  },
+  // SPORTS
+  {
+    id: 'sport-top-1',
+    name: 'Top Deportivo',
+    category: 'Deportiva',
+    season: 'Primavera/Verano',
+    type: 'Superior',
+    description: 'Soporte alto para ejercicio.',
+    basePrompt: 'high-support athletic sports bra',
+    thumbnail: 'https://images.unsplash.com/photo-1518310323263-71769732a9f5?w=200'
   },
   {
-    id: 'prada-minimal',
-    name: 'Elegancia de Milán',
-    designer: 'Prada Minimalist',
-    style: 'Cóctel Moderno',
-    description: 'Vestido columna de satén negro con bordados de cristal minimalistas en el cuello.',
-    thumbnail: 'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?q=80&w=400',
-    prompt: 'Sleek black satin column dress, minimalist crystal-embellished halter neck, sophisticated Italian chic, luxury rooftop lounge setting.'
+    id: 'sport-bot-1',
+    name: 'Leggings Pro',
+    category: 'Deportiva',
+    season: 'Otoño/Invierno',
+    type: 'Inferior',
+    description: 'Ajuste compresivo de alta tecnología.',
+    basePrompt: 'compressive high-waist yoga leggings',
+    thumbnail: 'https://images.unsplash.com/photo-1506629082923-3111170b628a?w=200'
+  },
+  // SLEEPWEAR
+  {
+    id: 'sleep-1',
+    name: 'Conjunto Pijama',
+    category: 'Dormir',
+    season: 'Otoño/Invierno',
+    type: 'Completo',
+    description: 'Seda suave para el descanso.',
+    basePrompt: 'luxurious soft silk pajama set',
+    thumbnail: 'https://images.unsplash.com/photo-1582232402127-142f36034f55?w=200'
   }
+];
+
+export const COLORS = [
+  { name: 'Negro', hex: '#000000' },
+  { name: 'Blanco', hex: '#FFFFFF' },
+  { name: 'Rojo', hex: '#FF0000' },
+  { name: 'Azul', hex: '#0000FF' },
+  { name: 'Rosa', hex: '#FFC0CB' },
+  { name: 'Verde', hex: '#008000' },
+  { name: 'Beige', hex: '#F5F5DC' },
+  { name: 'Gris', hex: '#808080' },
+];
+
+export const ANGLES: { name: string; icon: string }[] = [
+  { name: 'Frente', icon: 'M12 4v16m8-8H4' },
+  { name: 'Espalda', icon: 'M12 14l9-5-9-5-9 5 9 5z' },
+  { name: 'Lado', icon: 'M15 12a3 3 0 11-6 0 3 3 0 016 0z' },
+  { name: '45 Grados', icon: 'M13 5l7 7-7 7M5 5l7 7-7 7' },
 ];

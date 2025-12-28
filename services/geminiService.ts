@@ -1,35 +1,37 @@
 
 import { GoogleGenAI } from "@google/genai";
-import { Persona, Outfit } from "../types";
+import { Persona, ClothingItem, Angle } from "../types";
 
 export class GeminiService {
-  async generateOutfitPreview(persona: Persona, outfit: Outfit, referenceBase64: string): Promise<string> {
+  async generateOutfitPreview(
+    persona: Persona, 
+    top: ClothingItem | null, 
+    bottom: ClothingItem | null, 
+    full: ClothingItem | null,
+    topColor: string,
+    bottomColor: string,
+    fullColor: string,
+    angle: Angle,
+    referenceBase64: string
+  ): Promise<string> {
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
     
-    // Prompt de precisión quirúrgica para mantener la identidad
+    let outfitDescription = "";
+    if (full) {
+      outfitDescription = `a ${full.basePrompt} in ${fullColor} color`;
+    } else {
+      const topPart = top ? `${top.basePrompt} in ${topColor} color` : "no top";
+      const bottomPart = bottom ? `${bottom.basePrompt} in ${bottomColor} color` : "no bottom";
+      outfitDescription = `a combination of ${topPart} and ${bottomPart}`;
+    }
+
     const stylingPrompt = `
-      ULTRA-DETAILED FASHION PHOTOGRAPHY TASK:
-      USE THE ATTACHED PHOTOGRAPH AS THE ABSOLUTE AND ONLY REFERENCE FOR THE MODEL'S FACE, BODY, AND IDENTITY.
-      
-      MODEL DATA (MATCH THE PHOTO):
-      - IDENTITY: The exact woman in the photo.
-      - HEIGHT: 1.60 meters (Ensure proportions reflect this stature naturally).
-      - SKIN: Radiant warm morena (cinnamon) skin tone.
-      - HAIR: Long, straight, glossy black hair reaching the waist.
-      - PHYSIQUE: Slim, aesthetic, defined hourglass figure.
-      - FACIAL FEATURES: Maintain the expression and facial structure of the woman in the photo perfectly.
-      
-      DESIGN TO APPLY:
-      - OUTFIT: ${outfit.name} designed by ${outfit.designer}.
-      - DESCRIPTION: ${outfit.description}.
-      - STYLE ELEMENTS: ${outfit.prompt}.
-      
-      SCENE SETTING:
-      - LOCATION: High-end luxury noctural gala event or professional fashion studio.
-      - LIGHTING: Cinematic, warm, flattering lighting that highlights her morena skin and the dress textures.
-      - QUALITY: 8k resolution, photorealistic, Vogue-style composition.
-      
-      EXECUTION: Photomanipulate the ${outfit.name} onto the woman from the reference photo. She is the model. The result must be a flawless high-fashion shot of HER.
+      PHOTO EDITING TASK:
+      IDENTITY: Use the exact person from the attached photo. Maintain her face, 1.60m height, morena skin, and long black hair perfectly.
+      CLOTHING: She is wearing ${outfitDescription}.
+      CAMERA ANGLE: Show her from a ${angle} view.
+      QUALITY: Photorealistic fashion shot, 8k, professional studio lighting.
+      INSTRUCTION: Replace her original clothes with the specified ones. Ensure the fit matches her slim but curved body type.
     `;
 
     try {
@@ -60,7 +62,7 @@ export class GeminiService {
 
       throw new Error("No image part found in response");
     } catch (error) {
-      console.error("Gemini AI Studio Error:", error);
+      console.error("Gemini AI Error:", error);
       throw error;
     }
   }

@@ -1,11 +1,12 @@
 
 import React from 'react';
-import { Outfit, Persona } from '../types';
+// Corrected: Import ClothingItem instead of non-existent Outfit
+import { ClothingItem, Persona } from '../types';
 
 interface SimulatorDisplayProps {
   isLoading: boolean;
   generatedImageUrl: string | null;
-  selectedOutfit: Outfit | null;
+  selectedOutfit: ClothingItem | null;
   persona: Persona;
   onGenerate: () => void;
   isViewingFromGallery?: boolean;

@@ -1,26 +1,31 @@
 
+export type Category = 'Gala' | 'Casual' | 'Deportiva' | 'Dormir' | 'Jeans' | 'Shorts';
+export type Season = 'Primavera/Verano' | 'Otoño/Invierno';
+export type PieceType = 'Superior' | 'Inferior' | 'Completo';
+export type Angle = 'Frente' | 'Espalda' | 'Lado' | '45 Grados';
+
 export interface Persona {
   height: string;
   hair: string;
   skin: string;
   build: string;
   facialFeatures: string;
-  referenceImage?: string; // Base64 de la foto enviada
 }
 
-export interface Outfit {
+export interface ClothingItem {
   id: string;
   name: string;
-  designer: string;
-  style: string;
+  category: Category;
+  season: Season;
+  type: PieceType;
   description: string;
-  prompt: string;
+  basePrompt: string;
   thumbnail: string;
 }
 
 export interface GalleryItem {
   id: string;
   url: string;
-  outfitName: string;
+  outfitDetails: string;
   timestamp: string;
 }

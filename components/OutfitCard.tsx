@@ -1,11 +1,12 @@
 
 import React from 'react';
-import { Outfit } from '../types';
+// Corrected: Import ClothingItem instead of non-existent Outfit
+import { ClothingItem } from '../types';
 
 interface OutfitCardProps {
-  outfit: Outfit;
+  outfit: ClothingItem;
   isSelected: boolean;
-  onSelect: (outfit: Outfit) => void;
+  onSelect: (outfit: ClothingItem) => void;
 }
 
 const OutfitCard: React.FC<OutfitCardProps> = ({ outfit, isSelected, onSelect }) => {
@@ -24,7 +25,8 @@ const OutfitCard: React.FC<OutfitCardProps> = ({ outfit, isSelected, onSelect })
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent flex flex-col justify-end p-4 text-left">
           <span className="text-xs uppercase tracking-widest text-amber-500 font-semibold mb-1">
-            {outfit.style}
+            {/* Corrected: Use category instead of style */}
+            {outfit.category}
           </span>
           <h3 className="text-lg font-serif font-bold text-white leading-tight">
             {outfit.name}

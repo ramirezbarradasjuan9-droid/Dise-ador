@@ -1,15 +1,35 @@
 
-import React, { useState, useRef } from 'react';
-import { CATALOGO, MI_PERFIL } from './constants';
-import { Outfit, GalleryItem } from './types';
+import React, { useState, useRef, useMemo } from 'react';
+import { CATALOGO, MI_PERFIL, COLORS, ANGLES } from './constants';
+import { ClothingItem, Category, Season, Angle, PieceType, GalleryItem } from './types';
 import { geminiService } from './services/geminiService';
 
 export default function App() {
-  const [selected, setSelected] = useState<Outfit>(CATALOGO[0]);
+  const [activeCategory, setActiveCategory] = useState<Category | 'Todos'>('Todos');
+  const [activeSeason, setActiveSeason] = useState<Season>('Primavera/Verano');
+  const [selectedTop, setSelectedTop] = useState<ClothingItem | null>(null);
+  const [selectedBottom, setSelectedBottom] = useState<ClothingItem | null>(null);
+  const [selectedFull, setSelectedFull] = useState<ClothingItem | null>(CATALOGO.find(i => i.type === 'Completo') || null);
+  const [topColor, setTopColor] = useState(COLORS[0].name);
+  const [bottomColor, setBottomColor] = useState(COLORS[0].name);
+  const [fullColor, setFullColor] = useState(COLORS[0].name);
+  const [angle, setAngle] = useState<Angle>('Frente');
+  
   const [isGenerating, setIsGenerating] = useState(false);
   const [currentView, setCurrentView] = useState<string | null>(null);
   const [gallery, setGallery] = useState<GalleryItem[]>([]);
   const [referenceImg, setReferenceImg] = useState<string | null>(null);
+
+  const categories: (Category | 'Todos')[] = ['Todos', 'Gala', 'Casual', 'Jeans', 'Shorts', 'Deportiva', 'Dormir'];
+  const seasons: Season[] = ['Primavera/Verano', 'Otoño/Invierno'];
+
+  const filteredItems = useMemo(() => {
+    return CATALOGO.filter(item => {
+      const matchCat = activeCategory === 'Todos' || item.category === activeCategory;
+      const matchSea = item.season === activeSeason;
+      return matchCat && matchSea;
+    });
+  }, [activeCategory, activeSeason]);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -23,192 +43,274 @@ export default function App() {
     }
   };
 
+  const handleSelect = (item: ClothingItem) => {
+    if (item.type === 'Completo') {
+      setSelectedFull(item);
+      setSelectedTop(null);
+      setSelectedBottom(null);
+    } else if (item.type === 'Superior') {
+      setSelectedTop(item);
+      setSelectedFull(null);
+    } else if (item.type === 'Inferior') {
+      setSelectedBottom(item);
+      setSelectedFull(null);
+    }
+  };
+
   const handleSimulate = async () => {
     if (!referenceImg) {
-      alert("Por favor, sube primero la foto de la modelo usando el botón de la cámara.");
+      alert("Sube tu foto primero.");
       return;
     }
     setIsGenerating(true);
     try {
-      const url = await geminiService.generateOutfitPreview(MI_PERFIL, selected, referenceImg);
+      const url = await geminiService.generateOutfitPreview(
+        MI_PERFIL, 
+        selectedTop, 
+        selectedBottom, 
+        selectedFull,
+        topColor,
+        bottomColor,
+        fullColor,
+        angle,
+        referenceImg
+      );
       setCurrentView(url);
       
-      const newItem: GalleryItem = {
+      const outfitName = selectedFull ? selectedFull.name : `${selectedTop?.name || 'Top'} + ${selectedBottom?.name || 'Bottom'}`;
+      setGallery(prev => [{
         id: Date.now().toString(),
-        url: url,
-        outfitName: selected.name,
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-      };
-      setGallery(prev => [newItem, ...prev]);
-    } catch (error) {
-      console.error(error);
-      alert("Hubo un error al generar el diseño. Intenta nuevamente.");
+        url,
+        outfitDetails: outfitName,
+        timestamp: new Date().toLocaleTimeString()
+      }, ...prev]);
+    } catch (e) {
+      alert("Error en la simulación.");
     } finally {
       setIsGenerating(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#050505] text-white selection:bg-amber-500/30 font-sans">
-      {/* Navbar Premium */}
-      <header className="h-20 glass border-b border-white/10 px-6 md:px-12 flex items-center justify-between sticky top-0 z-50">
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-amber-600 to-amber-200 flex items-center justify-center font-serif text-black font-bold text-2xl shadow-lg shadow-amber-500/20">G</div>
-          <div className="hidden sm:block">
-            <h1 className="text-xl font-serif font-bold uppercase tracking-[0.2em] gold-text">Gala Vision Studio</h1>
-            <p className="text-[9px] uppercase tracking-[0.3em] text-neutral-500 font-bold tracking-widest">Personal Designer AI</p>
-          </div>
+    <div className="min-h-screen flex flex-col bg-[#0a0a0a] text-white">
+      {/* Header */}
+      <header className="h-16 glass sticky top-0 z-[100] px-4 md:px-12 flex items-center justify-between border-b border-white/5">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-lg bg-amber-500 text-black flex items-center justify-center font-serif font-bold text-lg">G</div>
+          <h1 className="text-sm font-serif font-bold gold-text tracking-widest hidden sm:block">GALA VISION STUDIO</h1>
         </div>
-        
-        <div className="flex items-center gap-4">
-          {/* BOTÓN DE CARGA EXPLÍCITO EN NAVBAR */}
-          <label htmlFor="navbar-upload" className="cursor-pointer px-6 py-2 rounded-full border border-amber-500/40 bg-amber-500/5 text-amber-500 text-[10px] font-bold uppercase tracking-widest hover:bg-amber-500 hover:text-black transition-all flex items-center gap-2">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-            {referenceImg ? 'Cambiar Foto' : 'Subir Foto'}
-            <input id="navbar-upload" type="file" onChange={handleFileUpload} className="hidden" accept="image/*" />
+        <div className="flex gap-4">
+          <label className="cursor-pointer bg-white/5 px-4 py-1.5 rounded-full text-[10px] font-bold border border-white/10 hover:bg-white/10 transition-all">
+            {referenceImg ? 'CAMBIAR FOTO' : 'SUBIR FOTO'}
+            <input type="file" onChange={handleFileUpload} className="hidden" accept="image/*" />
           </label>
         </div>
       </header>
 
-      <main className="flex-grow grid grid-cols-1 lg:grid-cols-12 overflow-hidden">
+      <div className="flex-grow flex flex-col lg:grid lg:grid-cols-12 overflow-hidden">
         
-        {/* Panel Izquierdo: Modelo y Catálogo */}
-        <aside className="lg:col-span-3 border-r border-white/5 p-6 space-y-8 overflow-y-auto max-h-[calc(100vh-80px)] bg-[#080808]">
-          
-          <section className="space-y-4">
-            <h2 className="text-[10px] uppercase tracking-[0.3em] text-amber-500 font-bold">1. Tu Referencia</h2>
-            
-            {/* USAMOS LABEL PARA QUE EL CLIC SEA NATIVO Y NO FALLE */}
-            <label htmlFor="sidebar-upload" className={`relative block aspect-[3/4] rounded-3xl overflow-hidden border-2 border-dashed transition-all cursor-pointer group bg-neutral-900/50 ${
-                referenceImg ? 'border-amber-500/40' : 'border-white/10 hover:border-amber-500/30'
-              }`}>
-              {referenceImg ? (
-                <>
-                  <img src={referenceImg} className="w-full h-full object-cover" alt="Tu Referencia" />
-                  <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center transition-all">
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-amber-400">Cambiar Imagen</span>
-                  </div>
-                </>
-              ) : (
-                <div className="absolute inset-0 flex flex-col items-center justify-center p-8 text-center">
-                  <div className="w-16 h-16 rounded-full bg-amber-500/10 flex items-center justify-center mb-4 border border-amber-500/20 group-hover:scale-110 transition-transform">
-                    <svg className="w-8 h-8 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-                  </div>
-                  <h3 className="text-xs font-bold uppercase tracking-widest text-white mb-2">Subir Foto</h3>
-                  <p className="text-[9px] text-neutral-500 uppercase tracking-tighter">Toca para abrir la cámara o galería</p>
-                </div>
-              )}
-              <input id="sidebar-upload" type="file" onChange={handleFileUpload} className="hidden" accept="image/*" />
-            </label>
-            
-            {referenceImg && (
-              <div className="px-4 py-2 bg-green-500/10 border border-green-500/20 rounded-xl flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                <span className="text-[9px] font-bold text-green-500 uppercase tracking-widest">Modelo lista</span>
-              </div>
-            )}
-          </section>
-
-          <section className="space-y-4">
-            <h2 className="text-[10px] uppercase tracking-[0.3em] text-white font-bold">2. Atuendos de Gala</h2>
-            <div className="space-y-3">
-              {CATALOGO.map(outfit => (
-                <button
-                  key={outfit.id}
-                  onClick={() => setSelected(outfit)}
-                  className={`w-full group p-3 rounded-2xl border transition-all text-left ${
-                    selected.id === outfit.id ? 'border-amber-500 bg-amber-500/5' : 'border-white/5 hover:bg-white/5'
-                  }`}
+        {/* Lado Izquierdo: Catálogo y Filtros */}
+        <aside className="lg:col-span-3 border-r border-white/5 flex flex-col bg-[#050505] lg:h-[calc(100vh-64px)] overflow-hidden">
+          <div className="p-4 space-y-4 border-b border-white/5">
+            {/* Temporadas */}
+            <div className="flex gap-2">
+              {seasons.map(s => (
+                <button 
+                  key={s} 
+                  onClick={() => setActiveSeason(s)}
+                  className={`flex-1 py-2 rounded-xl text-[9px] font-bold uppercase tracking-wider border transition-all ${activeSeason === s ? 'border-amber-500 bg-amber-500/10 text-amber-500' : 'border-white/5 bg-white/5 text-neutral-500'}`}
                 >
-                  <div className="flex gap-4">
-                    <img src={outfit.thumbnail} className="w-14 h-14 object-cover rounded-xl grayscale group-hover:grayscale-0" />
-                    <div className="flex flex-col justify-center">
-                      <p className="text-[8px] uppercase font-bold text-amber-500/70 mb-1">{outfit.designer}</p>
-                      <h4 className="text-sm font-serif text-white">{outfit.name}</h4>
-                    </div>
-                  </div>
+                  {s}
                 </button>
               ))}
             </div>
-          </section>
+            {/* Categorías (Scroll horizontal en movil) */}
+            <div className="flex lg:flex-wrap gap-2 overflow-x-auto pb-2 scrollbar-hide">
+              {categories.map(cat => (
+                <button 
+                  key={cat} 
+                  onClick={() => setActiveCategory(cat)}
+                  className={`whitespace-now6 px-4 py-2 rounded-full text-[10px] font-bold transition-all border ${activeCategory === cat ? 'bg-white text-black border-white' : 'border-white/10 text-neutral-500'}`}
+                >
+                  {cat}
+                </button>
+              ))}
+            </div>
+          </div>
 
-          {gallery.length > 0 && (
-            <section className="pt-6 border-t border-white/5">
-              <h2 className="text-[10px] uppercase tracking-[0.3em] text-neutral-500 font-bold mb-4 tracking-[0.4em]">Galería</h2>
-              <div className="grid grid-cols-3 gap-2">
-                {gallery.map(item => (
-                  <div key={item.id} onClick={() => setCurrentView(item.url)} className="aspect-[3/4] rounded-lg overflow-hidden border border-white/10 cursor-pointer hover:border-amber-500 transition-all">
-                    <img src={item.url} className="w-full h-full object-cover" />
+          <div className="flex-grow overflow-y-auto p-4 grid grid-cols-2 lg:grid-cols-1 gap-3">
+            {filteredItems.map(item => (
+              <button 
+                key={item.id} 
+                onClick={() => handleSelect(item)}
+                className={`group relative rounded-2xl overflow-hidden border transition-all ${
+                  (selectedFull?.id === item.id || selectedTop?.id === item.id || selectedBottom?.id === item.id) 
+                  ? 'border-amber-500' : 'border-white/5'
+                }`}
+              >
+                <div className="aspect-square lg:aspect-[16/9]">
+                  <img src={item.thumbnail} className="w-full h-full object-cover" alt={item.name} />
+                  <div className="absolute inset-0 bg-black/40 p-3 flex flex-col justify-end">
+                    <span className="text-[7px] text-amber-500 font-bold uppercase tracking-widest">{item.type}</span>
+                    <h4 className="text-[10px] font-bold leading-tight line-clamp-1">{item.name}</h4>
                   </div>
-                ))}
-              </div>
-            </section>
-          )}
+                </div>
+              </button>
+            ))}
+          </div>
         </aside>
 
-        {/* Panel Central: Visualización */}
-        <section className="lg:col-span-9 bg-[#020202] flex flex-col p-6 md:p-12 relative overflow-hidden items-center justify-center">
-          
-          <div className="w-full max-w-4xl aspect-[9/16] md:aspect-auto md:flex-grow glass rounded-[2.5rem] overflow-hidden relative flex items-center justify-center border border-white/10 shadow-2xl bg-neutral-900/30">
-            {isGenerating ? (
-              <div className="text-center p-12 space-y-6">
-                <div className="w-24 h-24 border-b-2 border-amber-500 rounded-full animate-spin mx-auto"></div>
-                <h3 className="text-2xl font-serif text-amber-500 italic">Diseñando para ti...</h3>
+        {/* Centro: Simulador */}
+        <main className="lg:col-span-6 p-4 md:p-8 flex flex-col gap-6 bg-[#020202] relative">
+          <div className="flex-grow glass rounded-[2rem] overflow-hidden relative flex flex-col">
+            {/* Toolbar superior del visualizador */}
+            <div className="absolute top-4 left-4 right-4 z-10 flex justify-between pointer-events-none">
+              <div className="flex gap-2 pointer-events-auto">
+                {ANGLES.map(a => (
+                  <button 
+                    key={a.name}
+                    onClick={() => setAngle(a.name as Angle)}
+                    className={`w-10 h-10 rounded-full glass border flex items-center justify-center transition-all ${angle === a.name ? 'border-amber-500 text-amber-500 bg-amber-500/10' : 'border-white/10 text-neutral-500'}`}
+                    title={a.name}
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d={a.icon}/></svg>
+                  </button>
+                ))}
               </div>
-            ) : currentView ? (
-              <div className="w-full h-full relative group">
-                <img src={currentView} className="h-full w-full object-contain md:object-cover animate-in fade-in duration-1000" alt="Vista" />
-                <div className="absolute bottom-10 left-10 p-6 glass rounded-2xl border border-white/10">
-                   <h4 className="text-3xl font-serif text-white">{selected.name}</h4>
-                   <p className="text-xs text-amber-500 uppercase tracking-widest mt-2">Personalizado - 1.60m</p>
+              {referenceImg && (
+                <div className="bg-green-500/10 border border-green-500/20 rounded-full px-4 py-1.5 flex items-center gap-2 pointer-events-auto">
+                  <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+                  <span className="text-[8px] font-bold text-green-500 uppercase tracking-widest">Modelo Ready</span>
                 </div>
-              </div>
-            ) : (
-              <div className="text-center max-w-lg px-8 space-y-10">
-                {!referenceImg ? (
-                  <label htmlFor="main-upload" className="block p-12 bg-white/5 border-2 border-dashed border-white/10 rounded-[2rem] cursor-pointer hover:border-amber-500/50 hover:bg-amber-500/5 transition-all group">
-                    <div className="w-20 h-20 bg-amber-500/10 rounded-full flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform">
-                      <svg className="w-10 h-10 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"/></svg>
+              )}
+            </div>
+
+            <div className="flex-grow flex items-center justify-center relative">
+              {isGenerating ? (
+                <div className="text-center animate-pulse">
+                  <div className="w-16 h-16 border-t-2 border-amber-500 rounded-full animate-spin mx-auto mb-4"></div>
+                  <p className="text-[10px] font-bold tracking-[0.3em] text-amber-500 uppercase">Procesando Identidad...</p>
+                </div>
+              ) : currentView ? (
+                <img src={currentView} className="w-full h-full object-contain animate-in fade-in duration-1000" alt="Resultado" />
+              ) : (
+                <div className="text-center p-12 max-w-sm">
+                  <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-6 border border-white/10">
+                    <svg className="w-10 h-10 text-neutral-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+                  </div>
+                  <h3 className="text-2xl font-serif text-neutral-400 mb-2">Tu Espejo Digital</h3>
+                  <p className="text-[10px] text-neutral-600 uppercase tracking-widest">Sube una foto y escoge tu estilo para empezar</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Botón Flotante de Acción */}
+          <div className="flex justify-center">
+            <button 
+              onClick={handleSimulate}
+              disabled={isGenerating || !referenceImg}
+              className={`px-24 py-5 rounded-full font-bold uppercase tracking-[0.4em] text-[10px] shadow-2xl transition-all ${
+                isGenerating || !referenceImg 
+                ? 'bg-neutral-900 text-neutral-700 cursor-not-allowed border border-white/5' 
+                : 'btn-gold text-black hover:scale-105 active:scale-95 shadow-amber-500/20'
+              }`}
+            >
+              {isGenerating ? 'Generando...' : 'Ver Simulación'}
+            </button>
+          </div>
+        </main>
+
+        {/* Lado Derecho: Personalización y Galería */}
+        <aside className="lg:col-span-3 border-l border-white/5 flex flex-col bg-[#050505] lg:h-[calc(100vh-64px)] overflow-hidden">
+          <div className="p-6 space-y-8 overflow-y-auto">
+            
+            {/* Mix & Match Section */}
+            <section className="space-y-6">
+              <h2 className="text-[10px] uppercase tracking-[0.3em] text-amber-500 font-bold border-b border-amber-500/20 pb-2">Personalización</h2>
+              
+              <div className="space-y-6">
+                {selectedFull ? (
+                  <div className="space-y-3">
+                    <label className="text-[9px] uppercase font-bold text-neutral-500 tracking-widest">Vestido / Conjunto</label>
+                    <div className="bg-white/5 p-3 rounded-2xl border border-white/10">
+                      <p className="text-xs font-bold mb-3">{selectedFull.name}</p>
+                      <div className="grid grid-cols-4 gap-2">
+                        {COLORS.map(c => (
+                          <button 
+                            key={c.name} 
+                            onClick={() => setFullColor(c.name)}
+                            className={`aspect-square rounded-full border-2 transition-all ${fullColor === c.name ? 'border-amber-500 scale-110' : 'border-transparent'}`}
+                            style={{ backgroundColor: c.hex }}
+                            title={c.name}
+                          />
+                        ))}
+                      </div>
                     </div>
-                    <h2 className="text-3xl font-serif text-white mb-4">Empieza aquí</h2>
-                    <p className="text-neutral-500 text-sm leading-relaxed italic">
-                      "Para poder ver los vestidos sobre tu cuerpo de 1.60m y rasgos específicos, necesitamos una foto de referencia. Toca aquí para subirla."
-                    </p>
-                    <input id="main-upload" type="file" onChange={handleFileUpload} className="hidden" accept="image/*" />
-                  </label>
+                  </div>
                 ) : (
                   <div className="space-y-6">
-                    <div className="w-24 h-24 bg-amber-500/20 rounded-full flex items-center justify-center mx-auto border border-amber-500 shadow-[0_0_30px_rgba(212,175,55,0.3)]">
-                      <svg className="w-10 h-10 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"/></svg>
+                    {/* TOP */}
+                    <div className="space-y-3">
+                      <label className="text-[9px] uppercase font-bold text-neutral-500 tracking-widest">Prenda Superior</label>
+                      <div className="bg-white/5 p-3 rounded-2xl border border-white/10">
+                        <p className="text-xs font-bold mb-3">{selectedTop?.name || 'No seleccionado'}</p>
+                        <div className="grid grid-cols-4 gap-2">
+                          {COLORS.map(c => (
+                            <button 
+                              key={c.name} 
+                              onClick={() => setTopColor(c.name)}
+                              className={`aspect-square rounded-full border-2 transition-all ${topColor === c.name ? 'border-amber-500 scale-110' : 'border-transparent'}`}
+                              style={{ backgroundColor: c.hex }}
+                              title={c.name}
+                            />
+                          ))}
+                        </div>
+                      </div>
                     </div>
-                    <h2 className="text-4xl font-serif gold-text">¡Foto lista!</h2>
-                    <p className="text-neutral-400">Has seleccionado el atuendo: <span className="text-white font-bold">{selected.name}</span></p>
-                    <p className="text-neutral-500 text-xs italic">Presiona el botón inferior para ver el resultado</p>
+                    {/* BOTTOM */}
+                    <div className="space-y-3">
+                      <label className="text-[9px] uppercase font-bold text-neutral-500 tracking-widest">Prenda Inferior</label>
+                      <div className="bg-white/5 p-3 rounded-2xl border border-white/10">
+                        <p className="text-xs font-bold mb-3">{selectedBottom?.name || 'No seleccionado'}</p>
+                        <div className="grid grid-cols-4 gap-2">
+                          {COLORS.map(c => (
+                            <button 
+                              key={c.name} 
+                              onClick={() => setBottomColor(c.name)}
+                              className={`aspect-square rounded-full border-2 transition-all ${bottomColor === c.name ? 'border-amber-500 scale-110' : 'border-transparent'}`}
+                              style={{ backgroundColor: c.hex }}
+                              title={c.name}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 )}
               </div>
+            </section>
+
+            {/* Galería */}
+            {gallery.length > 0 && (
+              <section className="space-y-4 pt-6 border-t border-white/5">
+                <h2 className="text-[10px] uppercase tracking-[0.3em] text-neutral-500 font-bold">Historial de Pruebas</h2>
+                <div className="grid grid-cols-3 gap-2">
+                  {gallery.map(item => (
+                    <button 
+                      key={item.id} 
+                      onClick={() => setCurrentView(item.url)}
+                      className="aspect-[3/4] rounded-lg overflow-hidden border border-white/10 hover:border-amber-500 transition-all"
+                    >
+                      <img src={item.url} className="w-full h-full object-cover" alt="Historial" />
+                    </button>
+                  ))}
+                </div>
+              </section>
             )}
           </div>
-
-          <div className="mt-8">
-            <button
-              onClick={handleSimulate}
-              disabled={isGenerating || !referenceImg}
-              className={`px-20 py-5 rounded-full font-bold uppercase tracking-[0.4em] text-[10px] transition-all duration-500 ${
-                isGenerating || !referenceImg 
-                ? 'bg-neutral-900 text-neutral-600 cursor-not-allowed opacity-50' 
-                : 'btn-gold text-black hover:scale-105 shadow-xl'
-              }`}
-            >
-              {isGenerating ? 'GENERANDO...' : referenceImg ? 'PROBAR VESTIDO' : 'FALTA FOTO DE MODELO'}
-            </button>
-          </div>
-        </section>
-      </main>
-
-      <footer className="h-12 border-t border-white/5 flex items-center justify-center text-[8px] uppercase tracking-[0.5em] text-neutral-700 bg-black">
-        GALA VISION STUDIO • ALTA COSTURA CON INTELIGENCIA ARTIFICIAL
-      </footer>
+        </aside>
+      </div>
     </div>
   );
 }
