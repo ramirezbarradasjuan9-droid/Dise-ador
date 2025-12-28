@@ -1,9 +1,10 @@
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Gala Vision AI - Studio de Alta Costura</title>
+    <title>Gala Vision AI - Lookbook de Alta Costura</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400;1,700&family=Inter:wght@200;300;400;600;700&display=swap" rel="stylesheet">
     <style>
@@ -14,98 +15,66 @@
         }
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #050505;
+            background-color: #020202;
             color: #f5f5f5;
-            overflow: hidden;
-            touch-action: manipulation;
+            overflow-x: hidden;
         }
         .font-serif { font-family: 'Playfair Display', serif; }
         .gold-text {
             background: linear-gradient(135deg, var(--gold) 0%, var(--gold-light) 50%, var(--gold-dark) 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            font-weight: 700;
         }
         .glass {
-            background: rgba(10, 10, 10, 0.85);
-            backdrop-filter: blur(25px);
-            -webkit-backdrop-filter: blur(25px);
-            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(10, 10, 10, 0.8);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        /* Efecto de Página de Revista */
+        .magazine-page {
+            transition: all 0.8s cubic-bezier(0.645, 0.045, 0.355, 1);
+            transform-style: preserve-3d;
+        }
+        .page-flip-enter {
+            transform: rotateY(-90deg);
+            opacity: 0;
+        }
+        .page-flip-active {
+            transform: rotateY(0deg);
+            opacity: 1;
         }
         .btn-gold {
             background: linear-gradient(135deg, var(--gold) 0%, var(--gold-dark) 100%);
-            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-            position: relative;
-            overflow: hidden;
+            color: black;
+            font-weight: 700;
+            transition: all 0.4s ease;
         }
         .btn-gold:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 15px 40px rgba(212, 175, 55, 0.3);
+            transform: scale(1.05);
+            box-shadow: 0 0 25px rgba(212, 175, 55, 0.4);
         }
-        .btn-gold::after {
-            content: '';
-            position: absolute;
-            top: -50%;
-            left: -50%;
-            width: 200%;
-            height: 200%;
-            background: linear-gradient(transparent, rgba(255,255,255,0.2), transparent);
-            transform: rotate(45deg);
-            transition: 0.5s;
-            pointer-events: none;
-        }
-        .btn-gold:hover::after {
-            left: 100%;
-        }
-        .no-scrollbar::-webkit-scrollbar {
-            display: none;
-        }
-        .no-scrollbar {
-            -ms-overflow-style: none;
-            scrollbar-width: none;
-        }
-        ::-webkit-scrollbar { width: 4px; height: 4px; }
-        ::-webkit-scrollbar-track { background: #000; }
-        ::-webkit-scrollbar-thumb { background: #222; border-radius: 10px; }
-        ::-webkit-scrollbar-thumb:hover { background: var(--gold); }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
         
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(15px); }
+        /* Animación de entrada de items del catálogo */
+        @keyframes itemFadeIn {
+            from { opacity: 0; transform: translateY(20px); }
             to { opacity: 1; transform: translateY(0); }
         }
-        .animate-fade { animation: fadeIn 0.9s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; }
+        .stagger-item { animation: itemFadeIn 0.6s ease forwards; }
 
-        @keyframes selectPulse {
-            0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(212, 175, 55, 0.4); }
-            50% { transform: scale(1.02); box-shadow: 0 0 20px 10px rgba(212, 175, 55, 0); }
-            100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(212, 175, 55, 0); }
-        }
-        .selection-pulse {
-            animation: selectPulse 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        @keyframes itemEntry {
-            from { opacity: 0; transform: scale(0.9); }
-            to { opacity: 1; transform: scale(1); }
-        }
-        .animate-item-entry {
-            animation: itemEntry 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-        }
-
-        @media (max-width: 1024px) {
-          body { overflow-y: auto; }
-          main { min-height: 80vh; }
+        .magazine-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 2rem;
         }
     </style>
-    <script type="importmap">
+<script type="importmap">
 {
   "imports": {
-    "@google/genai": "https://esm.sh/@google/genai@^1.34.0",
     "react": "https://esm.sh/react@^19.2.3",
-    "react-dom": "https://esm.sh/react-dom@^19.2.3",
-    "react-dom/client": "https://esm.sh/react-dom@^19.2.3/client",
     "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
-    "react/": "https://esm.sh/react@^19.2.3/"
+    "react/": "https://esm.sh/react@^19.2.3/",
+    "@google/genai": "https://esm.sh/@google/genai@^1.34.0"
   }
 }
 </script>
