@@ -14,81 +14,76 @@ export class GeminiService {
     pose: Pose,
     referenceBase64: string,
     makeup: MakeupState,
-    mood: Mood = 'Carismático y Sonriente'
+    mood: Mood = 'Carismático y Sonriente',
+    lighting: string = 'Cinematográfica de Estudio'
   ): Promise<string> {
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     
+    const base64Data = referenceBase64.includes(',') ? referenceBase64.split(',')[1] : referenceBase64;
+
     let outfitDescription = "";
     if (full) {
-      outfitDescription = `a ${full.basePrompt} in ${colors.full} color`;
+      outfitDescription = `un vestido de gala completo modelo "${full.name}" (${full.basePrompt}) en color ${colors.full}`;
     } else {
-      const topPart = top ? `${top.basePrompt} in ${colors.top} color` : "no top";
-      const bottomPart = bottom ? `${bottom.basePrompt} in ${colors.bottom} color` : "no bottom";
-      outfitDescription = `a combination of ${topPart} and ${bottomPart}`;
+      const topPart = top ? `${top.basePrompt} en color ${colors.top}` : "una parte superior elegante";
+      const bottomPart = bottom ? `${bottom.basePrompt} en color ${colors.bottom}` : "una parte inferior a juego";
+      outfitDescription = `una combinación de ${topPart} y ${bottomPart}`;
     }
 
     const accessoriesText = accessories.length > 0 
-      ? `Accessoring with: ${accessories.map(a => a.basePrompt).join(', ')}.`
-      : "No accessories.";
+      ? `Añade estos accesorios: ${accessories.map(a => a.name).join(', ')}.`
+      : "Sin accesorios adicionales.";
 
-    const makeupText = `FACE MAKEUP: Apply ${makeup.eyeshadow} eyeshadow. 
-    LIPS: ${makeup.lipstick} color, ${makeup.lipstickFinish} finish.`;
+    const makeupText = `MAQUILLAJE: Labios en estilo ${makeup.lipstick}, sombras de ojos en estilo ${makeup.eyeshadow}. Acabado ${makeup.lipstickFinish}.`;
 
     const stylingPrompt = `
-      FASHION AVATAR SIMULATION:
-      USER IDENTITY: PRESERVE THE EXACT FACE AND FEATURES FROM THE UPLOADED PHOTO.
-      MOOD/EXPRESSION: Adjust the facial expression to be ${mood}.
-      CLOTHING: The person is wearing ${outfitDescription}.
-      ACCESSORIES: ${accessoriesText}
-      ${makeupText}
-      POSE & ANGLE: ${pose} pose from ${angle} angle.
-      SCENE: Luxury fashion studio, soft cinematic lighting, 8k, professional photography.
-      INSTRUCTION: This is a high-quality avatar for social media. Keep the likeness of the person perfect.
+      FOTOGRAFÍA CINEMATOGRÁFICA DE ALTA COSTURA:
+      1. MODELO: Mantén los rasgos faciales, tono de piel "${persona.skin}" y cabello "${persona.hair}" de la persona en la foto de referencia.
+      2. ATUENDO: La modelo viste ${outfitDescription}.
+      3. DETALLES: ${accessoriesText}
+      4. BELLEZA: ${makeupText} Expresión facial "${mood}".
+      5. COMPOSICIÓN: Ángulo de cámara ${angle}, pose de modelo ${pose}.
+      6. ILUMINACIÓN: ${lighting}, calidad 8k UHD, estilo editorial de Vogue, iluminación de estudio profesional, fotorrealismo extremo.
+      
+      IMPORTANTE: No cambies la identidad de la persona, solo su ropa y maquillaje.
     `;
 
     try {
       const response = await ai.models.generateContent({
         model: 'gemini-2.5-flash-image',
-        contents: { parts: [{ text: stylingPrompt }, { inlineData: { mimeType: "image/jpeg", data: referenceBase64.split(',')[1] } }] },
-        config: { imageConfig: { aspectRatio: "9:16" } }
+        contents: { 
+          parts: [
+            { text: stylingPrompt }, 
+            { inlineData: { mimeType: "image/jpeg", data: base64Data } }
+          ] 
+        },
+        config: { 
+          imageConfig: { aspectRatio: "9:16" } 
+        }
       });
 
-      const imagePart = response.candidates?.[0]?.content?.parts?.find(p => p.inlineData);
-      return imagePart?.inlineData ? `data:image/png;base64,${imagePart.inlineData.data}` : "";
+      const candidate = response.candidates?.[0];
+      if (!candidate) throw new Error("No response from AI");
+
+      const imagePart = candidate.content?.parts?.find(p => p.inlineData);
+      if (!imagePart?.inlineData?.data) throw new Error("No image data generated");
+
+      return `data:image/png;base64,${imagePart.inlineData.data}`;
     } catch (error) {
-      console.error("Gemini AI Error:", error);
+      console.error("Gemini Image Error:", error);
       throw error;
     }
   }
 
   async getExpertAdvice(persona: Persona): Promise<string> {
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-    const prompt = `Actúa como un diseñador de moda de alta gama. Basado en este perfil: 
-    Estatura: ${persona.height}, Cabello: ${persona.hair}, Piel: ${persona.skin}, Complexión: ${persona.build}.
-    Danos 3 consejos breves y elegantes sobre qué colores le favorecen y qué estilos le harían lucir espectacular. Responde en español.`;
-
     try {
       const response = await ai.models.generateContent({
         model: 'gemini-3-flash-preview',
-        contents: prompt
+        contents: `Como diseñador de alta costura, da 3 consejos breves en español para este perfil físico: ${JSON.stringify(persona)}.`
       });
-      return response.text || "No se pudo obtener el consejo.";
-    } catch (error) { return "Error al conectar."; }
-  }
-
-  async generateCustomDesign(prompt: string): Promise<string> {
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-    const fullPrompt = `HIGH FASHION DESIGN SKETCH of ${prompt}.`;
-
-    try {
-      const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash-image',
-        contents: { parts: [{ text: fullPrompt }] },
-        config: { imageConfig: { aspectRatio: "3:4" } }
-      });
-      const imagePart = response.candidates?.[0]?.content?.parts?.find(p => p.inlineData);
-      return imagePart?.inlineData ? `data:image/png;base64,${imagePart.inlineData.data}` : "";
-    } catch (error) { throw error; }
+      return response.text || "No hay consejos disponibles.";
+    } catch (error) { return "Error de conexión."; }
   }
 }
 
