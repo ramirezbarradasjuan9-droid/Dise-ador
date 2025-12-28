@@ -4,6 +4,7 @@ export type Season = 'Primavera/Verano' | 'Otoño/Invierno';
 export type PieceType = 'Superior' | 'Inferior' | 'Completo' | 'Accesorio';
 export type Angle = 'Frente' | 'Espalda' | 'Lado' | '45 Grados';
 export type Pose = 'Estándar' | 'Caminando' | 'Mano en Cadera' | 'Sentada Elegante' | 'Mirada sobre Hombro';
+export type Mood = 'Serio y Profesional' | 'Carismático y Sonriente' | 'Risueño y Divertido' | 'Misterioso';
 
 export interface Persona {
   height: string;
@@ -32,6 +33,7 @@ export interface GalleryItem {
   timestamp: string;
   angle: Angle;
   pose: Pose;
+  isFavorite?: boolean;
 }
 
 export interface UserProfile {

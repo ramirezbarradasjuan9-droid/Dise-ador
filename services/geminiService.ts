@@ -1,6 +1,6 @@
 
 import { GoogleGenAI } from "@google/genai";
-import { Persona, ClothingItem, Angle, Pose, MakeupState } from "../types";
+import { Persona, ClothingItem, Angle, Pose, MakeupState, Mood } from "../types";
 
 export class GeminiService {
   async generateOutfitPreview(
@@ -13,7 +13,8 @@ export class GeminiService {
     angle: Angle,
     pose: Pose,
     referenceBase64: string,
-    makeup: MakeupState
+    makeup: MakeupState,
+    mood: Mood = 'Carismático y Sonriente'
   ): Promise<string> {
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     
@@ -30,20 +31,19 @@ export class GeminiService {
       ? `Accessoring with: ${accessories.map(a => a.basePrompt).join(', ')}.`
       : "No accessories.";
 
-    const makeupText = `FACE MAKEUP: Apply ${makeup.eyeshadow} eyeshadow style. 
-    LIP MAKEUP: Apply ${makeup.lipstick} with a ${makeup.lipstickFinish} finish and ${makeup.lipContour} contouring style. 
-    CHEEK MAKEUP: Apply ${makeup.blush} blush.`;
+    const makeupText = `FACE MAKEUP: Apply ${makeup.eyeshadow} eyeshadow. 
+    LIPS: ${makeup.lipstick} color, ${makeup.lipstickFinish} finish.`;
 
     const stylingPrompt = `
-      ULTRA-HIGH FASHION PHOTOMANIPULATION:
-      MODEL IDENTITY: Use the EXACT woman from the photo. Keep her ${persona.height} stature, ${persona.skin} skin, and ${persona.hair}.
-      CLOTHING: She is wearing ${outfitDescription}.
+      FASHION AVATAR SIMULATION:
+      USER IDENTITY: PRESERVE THE EXACT FACE AND FEATURES FROM THE UPLOADED PHOTO.
+      MOOD/EXPRESSION: Adjust the facial expression to be ${mood}.
+      CLOTHING: The person is wearing ${outfitDescription}.
       ACCESSORIES: ${accessoriesText}
       ${makeupText}
-      POSE & ANGLE: Model is in a ${pose} pose, viewed from the ${angle}.
-      SCENE: High-end professional fashion studio or luxury runway.
-      QUALITY: 8k resolution, cinematic lighting, Vogue magazine style, photorealistic.
-      INSTRUCTION: Replace her current attire with this specified outfit and apply the specified makeup. Full body shot.
+      POSE & ANGLE: ${pose} pose from ${angle} angle.
+      SCENE: Luxury fashion studio, soft cinematic lighting, 8k, professional photography.
+      INSTRUCTION: This is a high-quality avatar for social media. Keep the likeness of the person perfect.
     `;
 
     try {
@@ -65,24 +65,20 @@ export class GeminiService {
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     const prompt = `Actúa como un diseñador de moda de alta gama. Basado en este perfil: 
     Estatura: ${persona.height}, Cabello: ${persona.hair}, Piel: ${persona.skin}, Complexión: ${persona.build}.
-    Danos 3 consejos breves y elegantes sobre qué colores le favorecen, qué tipo de cortes (rayas verticales vs horizontales, etc.) y qué estilos de gala le harían lucir espectacular. Sé profesional y motivador. Responde en español de forma concisa.`;
+    Danos 3 consejos breves y elegantes sobre qué colores le favorecen y qué estilos le harían lucir espectacular. Responde en español.`;
 
     try {
       const response = await ai.models.generateContent({
         model: 'gemini-3-flash-preview',
         contents: prompt
       });
-      return response.text || "No se pudo obtener el consejo en este momento.";
-    } catch (error) {
-      return "Error al conectar con el diseñador virtual.";
-    }
+      return response.text || "No se pudo obtener el consejo.";
+    } catch (error) { return "Error al conectar."; }
   }
 
   async generateCustomDesign(prompt: string): Promise<string> {
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-    const fullPrompt = `HIGH FASHION DESIGN SKETCH: A professional fashion design of ${prompt}. 
-    Style: Minimalist luxury background, 8k resolution, cinematic lighting, studio photography, sharp details. 
-    Focus: The clothing item should be the main subject. No face needed, just a mannequin or professional headless model.`;
+    const fullPrompt = `HIGH FASHION DESIGN SKETCH of ${prompt}.`;
 
     try {
       const response = await ai.models.generateContent({
@@ -90,13 +86,9 @@ export class GeminiService {
         contents: { parts: [{ text: fullPrompt }] },
         config: { imageConfig: { aspectRatio: "3:4" } }
       });
-
       const imagePart = response.candidates?.[0]?.content?.parts?.find(p => p.inlineData);
       return imagePart?.inlineData ? `data:image/png;base64,${imagePart.inlineData.data}` : "";
-    } catch (error) {
-      console.error("Gemini Design Generation Error:", error);
-      throw error;
-    }
+    } catch (error) { throw error; }
   }
 }
 
