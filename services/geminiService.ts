@@ -19,35 +19,35 @@ export class GeminiService {
   ): Promise<string> {
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     
-    // Extraer solo la data base64 pura sin el prefijo data:image/...
     const base64Data = referenceBase64.includes(',') ? referenceBase64.split(',')[1] : referenceBase64;
 
     let outfitDescription = "";
     if (full) {
-      outfitDescription = `el vestido de gala "${full.name}" (${full.basePrompt}) en color ${colors.full}`;
+      outfitDescription = `la prenda de alta costura "${full.name}" (${full.basePrompt}) en tonalidad ${colors.full}`;
     } else {
-      const topPart = top ? `${top.basePrompt} en color ${colors.top}` : "su parte superior actual";
-      const bottomPart = bottom ? `${bottom.basePrompt} en color ${colors.bottom}` : "su parte inferior actual";
-      outfitDescription = `un conjunto compuesto por ${topPart} y ${bottomPart}`;
+      const topPart = top ? `${top.basePrompt} en color ${colors.top}` : "su torso original";
+      const bottomPart = bottom ? `${bottom.basePrompt} en color ${colors.bottom}` : "su parte inferior original";
+      outfitDescription = `el conjunto de ${topPart} y ${bottomPart}`;
     }
 
     const accessoriesText = accessories.length > 0 
-      ? `Acompañado de los siguientes accesorios: ${accessories.map(a => a.name).join(', ')}.`
-      : "Sin accesorios adicionales.";
+      ? `Accesorios adicionales: ${accessories.map(a => a.name).join(', ')}.`
+      : "Sin accesorios externos.";
 
-    const makeupText = `ESTILISMO: Labios ${makeup.lipstick} (${makeup.lipstickFinish}), ojos con técnica ${makeup.eyeshadow}.`;
+    const makeupText = `LOOK: Labios ${makeup.lipstick} ${makeup.lipstickFinish}, sombras ${makeup.eyeshadow}.`;
 
-    // Prompt ultra-estricto para preservación de identidad
-    const identityPreservationPrompt = `
-      IDENTITY PRESERVATION PROTOCOL - HIGH FIDELITY RENDER:
-      1. SUJETO: La persona en la imagen de referencia es el sujeto absoluto. MANTÉN EL 100% DE SUS RASGOS FACIALES, ESTRUCTURA ÓSEA, FORMA DE OJOS, NARIZ Y BOCA.
-      2. ATRIBUTOS FÍSICOS: Conserva intacto el tono de piel "${persona.skin}", el largo y textura del cabello "${persona.hair}" y su complexión física actual.
-      3. ACCIÓN: No generes una persona nueva. Actúa como una capa de "Overlay" digital para vestir a la persona de la foto con: ${outfitDescription}.
-      4. DETALLES: Integra ${accessoriesText} y aplica el maquillaje: ${makeupText}.
-      5. AMBIENTE: Iluminación ${lighting}, calidad de estudio fotográfico 8k, estilo editorial de alta costura.
-      6. CÁMARA: Ángulo ${angle}, manteniendo la pose de la persona o adaptándola suavemente a una pose "${pose}".
+    // PROMPT DE PRESERVACIÓN RADICAL DE IDENTIDAD
+    const radicalIdentityPrompt = `
+      STRICT IDENTITY PRESERVATION PROTOCOL (MASTER LEVEL):
+      1. SUJETO PRIMARIO: La persona en la imagen de referencia DEBE permanecer 100% IDÉNTICA. 
+      2. ROSTRO Y RASGOS: Mantén cada pixel de sus rasgos faciales, ojos, nariz, boca y expresión original. No suavices, no cambies etnia, no modifiques la edad.
+      3. FISIOLOGÍA: Conserva el tono de piel exacto ("${persona.skin}"), la textura del cabello y color ("${persona.hair}") y la estética corporal completa.
+      4. INTERVENCIÓN: Actúa exclusivamente como un sistema de superposición de ropa (Digital Try-On). Coloca ${outfitDescription} sobre el cuerpo del sujeto.
+      5. ESTILISMO: Integra ${accessoriesText} y el maquillaje ${makeupText} respetando la base facial original.
+      6. ENTORNO: Iluminación de estudio profesional (${lighting}), 8k resolution, fotorrealismo extremo, estilo cinematográfico.
+      7. POSICIÓN: Adapta el ángulo a ${angle} y la pose a ${pose} pero SIN ALTERAR la fisionomía del sujeto.
 
-      REGLA DE ORO: La identidad facial debe ser indiscutiblemente la misma que la foto original. Prohibido cambiar etnia, rasgos o proporciones corporales.
+      REGLA INQUEBRANTABLE: Si el rostro o la piel de la persona resultante no son 100% iguales a la foto de referencia, el render es un fallo. Cero modificaciones de identidad.
     `;
 
     try {
@@ -55,7 +55,7 @@ export class GeminiService {
         model: 'gemini-2.5-flash-image',
         contents: { 
           parts: [
-            { text: identityPreservationPrompt }, 
+            { text: radicalIdentityPrompt }, 
             { inlineData: { mimeType: "image/jpeg", data: base64Data } }
           ] 
         },
@@ -67,14 +67,14 @@ export class GeminiService {
       });
 
       const candidate = response.candidates?.[0];
-      if (!candidate) throw new Error("No candidates found");
+      if (!candidate) throw new Error("No output candidate");
 
       const imagePart = candidate.content?.parts?.find(p => p.inlineData);
-      if (!imagePart?.inlineData?.data) throw new Error("No image data found in candidate");
+      if (!imagePart?.inlineData?.data) throw new Error("Missing image binary");
 
       return `data:image/png;base64,${imagePart.inlineData.data}`;
     } catch (error) {
-      console.error("Critical Gemini Rendering Error:", error);
+      console.error("Gemini Render Engine Error:", error);
       throw error;
     }
   }
@@ -84,10 +84,10 @@ export class GeminiService {
     try {
       const response = await ai.models.generateContent({
         model: 'gemini-3-flash-preview',
-        contents: `Como director de arte de una revista de moda, da 3 consejos de estilo para una persona con estas características: ${JSON.stringify(persona)}.`
+        contents: `Analiza este perfil de alta costura: ${JSON.stringify(persona)}. Proporciona 3 breves recomendaciones de diseño cinematográfico.`
       });
       return response.text || "Consejos no disponibles.";
-    } catch (error) { return "Error de conexión."; }
+    } catch (error) { return "Error de análisis."; }
   }
 }
 
