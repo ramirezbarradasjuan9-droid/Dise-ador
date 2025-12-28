@@ -19,33 +19,35 @@ export class GeminiService {
   ): Promise<string> {
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     
+    // Extraer solo la data base64 pura sin el prefijo data:image/...
     const base64Data = referenceBase64.includes(',') ? referenceBase64.split(',')[1] : referenceBase64;
 
     let outfitDescription = "";
     if (full) {
-      outfitDescription = `un vestido de gala completo modelo "${full.name}" (${full.basePrompt}) en color ${colors.full}`;
+      outfitDescription = `el vestido de gala "${full.name}" (${full.basePrompt}) en color ${colors.full}`;
     } else {
-      const topPart = top ? `${top.basePrompt} en color ${colors.top}` : "una parte superior elegante";
-      const bottomPart = bottom ? `${bottom.basePrompt} en color ${colors.bottom}` : "una parte inferior a juego";
-      outfitDescription = `una combinación de ${topPart} y ${bottomPart}`;
+      const topPart = top ? `${top.basePrompt} en color ${colors.top}` : "su parte superior actual";
+      const bottomPart = bottom ? `${bottom.basePrompt} en color ${colors.bottom}` : "su parte inferior actual";
+      outfitDescription = `un conjunto compuesto por ${topPart} y ${bottomPart}`;
     }
 
     const accessoriesText = accessories.length > 0 
-      ? `Añade estos accesorios: ${accessories.map(a => a.name).join(', ')}.`
+      ? `Acompañado de los siguientes accesorios: ${accessories.map(a => a.name).join(', ')}.`
       : "Sin accesorios adicionales.";
 
-    const makeupText = `MAQUILLAJE: Labios en estilo ${makeup.lipstick}, sombras de ojos en estilo ${makeup.eyeshadow}. Acabado ${makeup.lipstickFinish}.`;
+    const makeupText = `ESTILISMO: Labios ${makeup.lipstick} (${makeup.lipstickFinish}), ojos con técnica ${makeup.eyeshadow}.`;
 
-    const stylingPrompt = `
-      FOTOGRAFÍA CINEMATOGRÁFICA DE ALTA COSTURA:
-      1. MODELO: Mantén los rasgos faciales, tono de piel "${persona.skin}" y cabello "${persona.hair}" de la persona en la foto de referencia.
-      2. ATUENDO: La modelo viste ${outfitDescription}.
-      3. DETALLES: ${accessoriesText}
-      4. BELLEZA: ${makeupText} Expresión facial "${mood}".
-      5. COMPOSICIÓN: Ángulo de cámara ${angle}, pose de modelo ${pose}.
-      6. ILUMINACIÓN: ${lighting}, calidad 8k UHD, estilo editorial de Vogue, iluminación de estudio profesional, fotorrealismo extremo.
-      
-      IMPORTANTE: No cambies la identidad de la persona, solo su ropa y maquillaje.
+    // Prompt ultra-estricto para preservación de identidad
+    const identityPreservationPrompt = `
+      IDENTITY PRESERVATION PROTOCOL - HIGH FIDELITY RENDER:
+      1. SUJETO: La persona en la imagen de referencia es el sujeto absoluto. MANTÉN EL 100% DE SUS RASGOS FACIALES, ESTRUCTURA ÓSEA, FORMA DE OJOS, NARIZ Y BOCA.
+      2. ATRIBUTOS FÍSICOS: Conserva intacto el tono de piel "${persona.skin}", el largo y textura del cabello "${persona.hair}" y su complexión física actual.
+      3. ACCIÓN: No generes una persona nueva. Actúa como una capa de "Overlay" digital para vestir a la persona de la foto con: ${outfitDescription}.
+      4. DETALLES: Integra ${accessoriesText} y aplica el maquillaje: ${makeupText}.
+      5. AMBIENTE: Iluminación ${lighting}, calidad de estudio fotográfico 8k, estilo editorial de alta costura.
+      6. CÁMARA: Ángulo ${angle}, manteniendo la pose de la persona o adaptándola suavemente a una pose "${pose}".
+
+      REGLA DE ORO: La identidad facial debe ser indiscutiblemente la misma que la foto original. Prohibido cambiar etnia, rasgos o proporciones corporales.
     `;
 
     try {
@@ -53,24 +55,26 @@ export class GeminiService {
         model: 'gemini-2.5-flash-image',
         contents: { 
           parts: [
-            { text: stylingPrompt }, 
+            { text: identityPreservationPrompt }, 
             { inlineData: { mimeType: "image/jpeg", data: base64Data } }
           ] 
         },
         config: { 
-          imageConfig: { aspectRatio: "9:16" } 
+          imageConfig: { 
+            aspectRatio: "9:16"
+          } 
         }
       });
 
       const candidate = response.candidates?.[0];
-      if (!candidate) throw new Error("No response from AI");
+      if (!candidate) throw new Error("No candidates found");
 
       const imagePart = candidate.content?.parts?.find(p => p.inlineData);
-      if (!imagePart?.inlineData?.data) throw new Error("No image data generated");
+      if (!imagePart?.inlineData?.data) throw new Error("No image data found in candidate");
 
       return `data:image/png;base64,${imagePart.inlineData.data}`;
     } catch (error) {
-      console.error("Gemini Image Error:", error);
+      console.error("Critical Gemini Rendering Error:", error);
       throw error;
     }
   }
@@ -80,9 +84,9 @@ export class GeminiService {
     try {
       const response = await ai.models.generateContent({
         model: 'gemini-3-flash-preview',
-        contents: `Como diseñador de alta costura, da 3 consejos breves en español para este perfil físico: ${JSON.stringify(persona)}.`
+        contents: `Como director de arte de una revista de moda, da 3 consejos de estilo para una persona con estas características: ${JSON.stringify(persona)}.`
       });
-      return response.text || "No hay consejos disponibles.";
+      return response.text || "Consejos no disponibles.";
     } catch (error) { return "Error de conexión."; }
   }
 }
