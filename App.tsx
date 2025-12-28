@@ -41,6 +41,7 @@ export default function App() {
 
   const [isStageOpen, setIsStageOpen] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const [currentView, setCurrentView] = useState<string | null>(null);
   const [angle, setAngle] = useState<Angle>('Frente');
   const [pose, setPose] = useState<Pose>('Estándar');
@@ -92,25 +93,23 @@ export default function App() {
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file && currentUser) {
+      setIsUploading(true);
       const reader = new FileReader();
-      reader.onloadstart = () => setIsGenerating(true);
-      reader.onloadend = () => {
+      reader.onload = () => {
         const base64 = reader.result as string;
         const usersStr = localStorage.getItem('gala_vision_users');
         const users = usersStr ? JSON.parse(usersStr) : {};
         const updatedUser = { ...currentUser, referenceImg: base64 };
         
-        // Actualizar almacenamiento persistente
         users[currentUser.username] = updatedUser;
         localStorage.setItem('gala_vision_users', JSON.stringify(users));
         
-        // Actualizar estado local inmediatamente
         setCurrentUser(updatedUser);
-        setIsGenerating(false);
+        setIsUploading(false);
       };
       reader.onerror = () => {
-        alert("Error al cargar la imagen. Intenta con otro archivo.");
-        setIsGenerating(false);
+        alert("Error al procesar la imagen.");
+        setIsUploading(false);
       };
       reader.readAsDataURL(file);
     }
@@ -133,8 +132,8 @@ export default function App() {
   };
 
   const handleSimulate = async () => {
-    if (!currentUser?.referenceImg) return alert("Por favor, sube tu foto de referencia para conservar tu identidad.");
-    if (!selectedFull && !selectedTop) return alert("Selecciona un diseño del catálogo.");
+    if (!currentUser?.referenceImg) return alert("Por favor, sube tu foto de referencia primero.");
+    if (!selectedFull && !selectedTop) return alert("Selecciona una prenda para la simulación.");
     
     setIsGenerating(true);
     setIsStageOpen(true);
@@ -152,7 +151,7 @@ export default function App() {
         const newItem: GalleryItem = {
           id: Date.now().toString(),
           url,
-          outfitDetails: `${selectedFull?.name || 'Look Personalizado'}`,
+          outfitDetails: `${selectedFull?.name || 'Composición Master'}`,
           timestamp: new Date().toLocaleString(),
           angle,
           pose,
@@ -164,7 +163,7 @@ export default function App() {
         setCurrentUser(updatedUser);
       }
     } catch (e) {
-      alert("Error en la simulación. Asegúrate de que la foto de tu rostro sea clara.");
+      alert("Error en el renderizado cinematográfico.");
       setIsStageOpen(false);
     } finally {
       setIsGenerating(false);
@@ -189,10 +188,10 @@ export default function App() {
             <input type="text" placeholder="Usuario" required className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-sm outline-none focus:border-amber-500/50" value={authForm.username} onChange={e => setAuthForm({...authForm, username: e.target.value})} />
             <input type="password" placeholder="Contraseña" required className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-sm outline-none focus:border-amber-500/50" value={authForm.password} onChange={e => setAuthForm({...authForm, password: e.target.value})} />
             {authError && <p className="text-xs text-red-500 font-bold">{authError}</p>}
-            <button className="w-full btn-gold py-5 rounded-2xl text-black font-bold uppercase tracking-widest text-xs mt-4 shadow-xl">Entrar al Atelier</button>
+            <button className="w-full btn-gold py-5 rounded-2xl text-black font-bold uppercase tracking-widest text-xs mt-4">Entrar al Atelier</button>
           </form>
-          <button onClick={() => setIsLoginView(!isLoginView)} className="mt-8 text-[10px] text-neutral-500 uppercase font-bold tracking-widest hover:text-white transition-colors">
-            {isLoginView ? '¿Nuevo aquí? Regístrate' : 'Ya tengo cuenta'}
+          <button onClick={() => setIsLoginView(!isLoginView)} className="mt-8 text-[10px] text-neutral-500 uppercase font-bold tracking-widest hover:text-white">
+            {isLoginView ? '¿No tienes cuenta? Regístrate' : 'Ya tengo cuenta'}
           </button>
         </div>
       </div>
@@ -200,17 +199,17 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-[#010101] text-white flex flex-col font-sans selection:bg-amber-500/30">
+    <div className="min-h-screen bg-[#010101] text-white flex flex-col font-sans">
       {/* HEADER */}
-      <header className="h-20 glass border-b border-white/5 flex items-center justify-between px-6 lg:px-12 sticky top-0 z-[100] shadow-2xl">
+      <header className="h-20 glass border-b border-white/5 flex items-center justify-between px-6 lg:px-12 sticky top-0 z-[100]">
         <div className="flex items-center gap-4">
           <div className="w-10 h-10 rounded-xl bg-amber-500 flex items-center justify-center font-serif font-bold text-black text-xl shadow-[0_0_20px_rgba(212,175,55,0.4)]">G</div>
-          <h1 className="text-xs font-serif gold-text tracking-widest uppercase hidden sm:block">Atelier Digital Gala Vision</h1>
+          <h1 className="text-xs font-serif gold-text tracking-widest uppercase hidden sm:block">Atelier Master Gala Vision</h1>
         </div>
         <nav className="flex items-center gap-2">
           {(['Lookbook', 'Gallery'] as const).map(tab => (
             <button key={tab} onClick={() => setActiveTab(tab)} className={`px-6 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all ${activeTab === tab ? 'bg-amber-500 text-black shadow-lg shadow-amber-500/20' : 'text-neutral-500 hover:text-white'}`}>
-              {tab === 'Lookbook' ? '📖 Colecciones' : '🖼️ Galería'}
+              {tab === 'Lookbook' ? '📖 Colecciones' : '🖼️ Mi Galería'}
             </button>
           ))}
           <div className="w-px h-6 bg-white/10 mx-2" />
@@ -220,7 +219,7 @@ export default function App() {
 
       <main className="flex-grow flex flex-col lg:grid lg:grid-cols-12 overflow-hidden">
         
-        {/* PANEL IZQUIERDO: MASTER IDENTITY MONITOR */}
+        {/* PANEL IZQUIERDO: IDENTITY MONITOR */}
         <aside className="lg:col-span-3 border-r border-white/5 bg-[#050505] flex flex-col overflow-y-auto no-scrollbar p-6 space-y-10 shadow-2xl">
           <div className="space-y-6">
             <div className="flex items-center justify-between">
@@ -230,31 +229,35 @@ export default function App() {
                   onClick={() => fileInputRef.current?.click()}
                   className="text-[9px] font-bold text-amber-500/60 hover:text-amber-500 flex items-center gap-1 uppercase transition-all"
                 >
-                  <span className="text-xs">🔄</span> Actualizar
+                  Cambiar
                 </button>
               )}
             </div>
             
             <div 
-              className={`aspect-[4/5] rounded-[3rem] overflow-hidden bg-neutral-900 border-2 relative group shadow-[0_0_40px_rgba(0,0,0,0.8)] transition-all ${currentUser?.referenceImg ? 'border-white/10' : 'border-dashed border-white/20 hover:border-amber-500/30'}`}
-              onClick={() => !currentUser?.referenceImg && fileInputRef.current?.click()}
+              className={`aspect-[4/5] rounded-[3rem] overflow-hidden bg-neutral-900 border-2 relative group shadow-2xl transition-all cursor-pointer ${currentUser?.referenceImg ? 'border-white/10' : 'border-dashed border-white/20 hover:border-amber-500/50'}`}
+              onClick={() => fileInputRef.current?.click()}
             >
-              {currentUser?.referenceImg ? (
-                <div className="relative w-full h-full">
-                  <img src={currentUser.referenceImg} className="w-full h-full object-cover animate-in fade-in duration-500" alt="Identity" />
-                  {/* Overlay de Escaneo Master */}
-                  <div className="absolute inset-0 pointer-events-none">
-                    <div className="absolute top-0 left-0 right-0 h-[2px] bg-amber-500/20 animate-scan shadow-[0_0_10px_rgba(212,175,55,0.5)]" />
-                    <div className="absolute inset-0 border border-amber-500/10" />
+              {isUploading ? (
+                <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 backdrop-blur-md z-10">
+                   <div className="w-10 h-10 border-2 border-amber-500 border-t-transparent rounded-full animate-spin mb-4" />
+                   <p className="text-[9px] font-bold text-amber-500 uppercase tracking-widest">Sincronizando...</p>
+                </div>
+              ) : currentUser?.referenceImg ? (
+                <div className="relative w-full h-full group">
+                  <img key={currentUser.referenceImg} src={currentUser.referenceImg} className="w-full h-full object-cover animate-in fade-in duration-500" alt="Identity" />
+                  <div className="absolute inset-0 pointer-events-none border border-amber-500/10">
+                    <div className="absolute top-0 left-0 right-0 h-[2px] bg-amber-500/40 animate-scan shadow-[0_0_15px_rgba(212,175,55,0.6)]" />
+                  </div>
+                  <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-white">🔄 Cambiar Foto</span>
                   </div>
                 </div>
               ) : (
-                <div className="absolute inset-0 flex flex-col items-center justify-center p-8 text-center cursor-pointer">
+                <div className="absolute inset-0 flex flex-col items-center justify-center p-8 text-center text-neutral-600 hover:text-amber-500 transition-colors">
                   <span className="text-4xl mb-4 grayscale opacity-40">📸</span>
-                  <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-neutral-600 leading-relaxed">
-                    Sube tu foto de referencia<br/>
-                    <span className="text-amber-500/40 font-light text-[8px] mt-2 block italic">Preservación de rasgos al 100%</span>
-                  </p>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.2em] leading-relaxed">Sube tu foto de referencia</p>
+                  <p className="text-[8px] text-neutral-700 mt-2 italic">Preservación de identidad activada</p>
                 </div>
               )}
               <input type="file" ref={fileInputRef} onChange={handleFileUpload} className="hidden" accept="image/*" />
@@ -262,15 +265,15 @@ export default function App() {
           </div>
 
           <div className="space-y-4">
-            <h3 className="text-[10px] uppercase font-bold text-amber-500 tracking-widest">Configuración Actual</h3>
+            <h3 className="text-[10px] uppercase font-bold text-amber-500 tracking-widest">Estado de Composición</h3>
             <div className="space-y-2">
-              <div className="p-4 bg-white/5 rounded-2xl border border-white/5 flex flex-col gap-1 shadow-inner">
-                <span className="text-[8px] text-neutral-600 font-bold uppercase tracking-widest">Outfit Elegido</span>
-                <span className="text-[11px] font-bold text-white truncate">{selectedFull?.name || selectedTop?.name || 'Esperando selección...'}</span>
+              <div className="p-4 bg-white/5 rounded-2xl border border-white/5 flex flex-col gap-1">
+                <span className="text-[8px] text-neutral-600 font-bold uppercase">Outfit Base</span>
+                <span className="text-[11px] font-bold text-white truncate">{selectedFull?.name || selectedTop?.name || 'Vacío'}</span>
               </div>
-              <div className="p-4 bg-white/5 rounded-2xl border border-white/5 flex flex-col gap-1 shadow-inner">
-                <span className="text-[8px] text-neutral-600 font-bold uppercase tracking-widest">Atmósfera</span>
-                <span className="text-[10px] font-medium text-white/40">{selectedLighting}</span>
+              <div className="p-4 bg-white/5 rounded-2xl border border-white/5 flex flex-col gap-1">
+                <span className="text-[8px] text-neutral-600 font-bold uppercase">Iluminación</span>
+                <span className="text-[11px] font-bold text-white/50">{selectedLighting}</span>
               </div>
             </div>
           </div>
@@ -278,9 +281,9 @@ export default function App() {
           <button 
             onClick={handleSimulate} 
             disabled={isGenerating || !currentUser?.referenceImg}
-            className={`w-full py-6 rounded-3xl text-black font-bold uppercase tracking-[0.3em] text-[10px] shadow-2xl transition-all ${isGenerating || !currentUser?.referenceImg ? 'bg-neutral-800 text-neutral-600 cursor-not-allowed opacity-50' : 'btn-gold hover:scale-[1.02] active:scale-95'}`}
+            className={`w-full py-6 rounded-3xl text-black font-bold uppercase tracking-[0.3em] text-[10px] shadow-2xl transition-all ${isGenerating || !currentUser?.referenceImg ? 'bg-neutral-800 text-neutral-600 cursor-not-allowed opacity-50' : 'btn-gold'}`}
           >
-            {isGenerating ? <span className="animate-pulse">Procesando Look...</span> : '✨ Revelar Mi Look'}
+            {isGenerating ? <span className="animate-pulse">Renderizando Escena...</span> : '✨ Revelar Mi Look'}
           </button>
         </aside>
 
@@ -298,7 +301,7 @@ export default function App() {
                     <button 
                       key={cat} 
                       onClick={() => { setActiveCategory(cat); setCatalogPage(0); }}
-                      className={`px-10 py-3 rounded-full text-[9px] font-bold uppercase tracking-widest transition-all ${activeCategory === cat ? 'bg-white text-black shadow-2xl' : 'hover:text-amber-500 text-neutral-500'}`}
+                      className={`px-10 py-2.5 rounded-full text-[9px] font-bold uppercase tracking-widest transition-all ${activeCategory === cat ? 'bg-white text-black shadow-xl' : 'hover:text-amber-500 text-neutral-500'}`}
                     >
                       {cat}
                     </button>
@@ -312,7 +315,7 @@ export default function App() {
                   return (
                     <div 
                       key={item.id} 
-                      className={`group relative magazine-page bg-neutral-900 rounded-[3.5rem] overflow-hidden border-2 transition-all cursor-pointer shadow-[0_0_50px_rgba(0,0,0,0.5)] ${isSelected ? 'border-amber-500 scale-[0.98]' : 'border-white/5 hover:border-white/20'}`}
+                      className={`group relative magazine-page bg-neutral-900 rounded-[3.5rem] overflow-hidden border-2 transition-all cursor-pointer shadow-2xl ${isSelected ? 'border-amber-500 scale-[0.98]' : 'border-white/5 hover:border-white/20'}`}
                       style={{ animationDelay: `${idx * 150}ms` }}
                       onClick={() => toggleSelection(item)}
                     >
@@ -331,13 +334,13 @@ export default function App() {
 
               <div className="pt-12 flex items-center justify-between border-t border-white/5">
                 <button disabled={catalogPage === 0} onClick={() => setCatalogPage(p => p - 1)} className="w-16 h-16 rounded-full glass border border-white/10 flex items-center justify-center text-xl hover:bg-white/5 transition-all disabled:opacity-10">←</button>
-                <span className="text-lg font-serif gold-text tracking-widest">Página {catalogPage + 1} / {Math.ceil(filteredCatalog.length / itemsPerPage)}</span>
+                <span className="text-lg font-serif gold-text tracking-widest">Página {catalogPage + 1} de {Math.ceil(filteredCatalog.length / itemsPerPage)}</span>
                 <button disabled={(catalogPage + 1) * itemsPerPage >= filteredCatalog.length} onClick={() => setCatalogPage(p => p + 1)} className="w-16 h-16 rounded-full glass border border-white/10 flex items-center justify-center text-xl hover:bg-white/5 transition-all disabled:opacity-10">→</button>
               </div>
             </div>
           ) : (
             <div className="max-w-6xl mx-auto space-y-12">
-              <h2 className="text-4xl font-serif gold-text border-b border-white/5 pb-10">Galería de Diseños Guardados</h2>
+              <h2 className="text-4xl font-serif gold-text border-b border-white/5 pb-10">Archivo Master</h2>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
                 {currentUser?.gallery.map(item => (
                   <div key={item.id} className="group relative aspect-[3/4] rounded-3xl overflow-hidden border border-white/5 bg-neutral-900 cursor-pointer shadow-xl" onClick={() => { setCurrentView(item.url); setIsStageOpen(true); }}>
@@ -354,26 +357,24 @@ export default function App() {
         </section>
       </main>
 
-      {/* MODAL SIMULADOR: STUDIO RENDER MONITOR */}
+      {/* MODAL SIMULADOR: STUDIO MONITOR */}
       {isStageOpen && (
-        <div className="fixed inset-0 z-[100] bg-[#010101] flex flex-col animate-in fade-in duration-700">
-          {/* Render Top Bar */}
+        <div className="fixed inset-0 z-[100] bg-[#010101] flex flex-col animate-in fade-in duration-500">
           <header className="h-16 border-b border-white/10 px-8 flex items-center justify-between bg-black/40 backdrop-blur-2xl">
             <div className="flex items-center gap-8">
               <div className="flex items-center gap-3">
                  <span className="w-2.5 h-2.5 rounded-full bg-red-600 animate-pulse shadow-[0_0_15px_rgba(220,38,38,0.6)]" />
-                 <span className="text-[10px] font-mono text-white uppercase tracking-[0.4em]">RENDER_SESSION_MASTER // 8K_HDR</span>
+                 <span className="text-[10px] font-mono text-white uppercase tracking-[0.4em]">RENDER_SESSION_MASTER // 8K</span>
               </div>
               <div className="hidden md:flex gap-6 text-[8px] font-mono text-neutral-600 uppercase tracking-widest border-l border-white/10 pl-6">
-                <span>IDENTITY_LOCKED: 100%</span>
-                <span>COLOR: sRGB_D65</span>
+                <span>IDENTITY_LOCK: ACTIVE</span>
+                <span>PIXEL_PRESERVE: 100%</span>
               </div>
             </div>
             <button onClick={() => { setIsStageOpen(false); setCurrentView(null); }} className="px-6 py-2.5 rounded-xl bg-red-600/10 hover:bg-red-600/30 text-red-500 text-[10px] font-bold transition-all uppercase tracking-widest border border-red-600/20 shadow-xl">Cerrar Sesión</button>
           </header>
           
           <div className="flex-grow flex flex-col lg:grid lg:grid-cols-12 overflow-hidden">
-            {/* Controles de Escena */}
             <aside className="lg:col-span-3 border-r border-white/5 p-8 space-y-12 bg-[#050505] overflow-y-auto no-scrollbar shadow-inner">
               <div className="space-y-10">
                 <div>
@@ -391,7 +392,7 @@ export default function App() {
                       <label className="text-[9px] text-white/30 font-bold uppercase tracking-[0.2em]">Esquema de Luz</label>
                       <div className="space-y-2">
                         {STUDIO_LIGHTS.map(l => (
-                          <button key={l} onClick={() => setSelectedLighting(l)} className={`w-full px-5 py-4 rounded-xl text-[9px] font-bold uppercase text-left border transition-all ${selectedLighting === l ? 'bg-amber-500/10 border-amber-500/40 text-amber-500 shadow-inner shadow-amber-500/5' : 'bg-transparent border-white/5 text-neutral-600 hover:text-neutral-400'}`}>{l}</button>
+                          <button key={l} onClick={() => setSelectedLighting(l)} className={`w-full px-5 py-4 rounded-xl text-[9px] font-bold uppercase text-left border transition-all ${selectedLighting === l ? 'bg-amber-500/10 border-amber-500/40 text-amber-500' : 'bg-transparent border-white/5 text-neutral-600 hover:text-neutral-400'}`}>{l}</button>
                         ))}
                       </div>
                     </div>
@@ -399,7 +400,7 @@ export default function App() {
                 </div>
                 
                 <div>
-                  <h3 className="text-[10px] uppercase font-bold text-neutral-600 tracking-widest mb-6">Pose Cinematográfica</h3>
+                  <h3 className="text-[10px] uppercase font-bold text-neutral-600 tracking-widest mb-6">Pose de Referencia</h3>
                   <div className="space-y-2">
                     {POSES.map(p => (
                       <button key={p.name} onClick={() => setPose(p.name as Pose)} className={`w-full px-5 py-4 rounded-xl text-[9px] font-bold uppercase text-left border transition-all ${pose === p.name ? 'bg-white/10 border-white/20 text-white' : 'bg-white/5 border-white/5 text-neutral-500 hover:bg-white/5'}`}>{p.name}</button>
@@ -408,15 +409,13 @@ export default function App() {
                 </div>
               </div>
               
-              <button onClick={handleSimulate} disabled={isGenerating} className="w-full btn-gold py-6 rounded-3xl text-black font-bold uppercase text-[10px] tracking-[0.4em] shadow-[0_15px_40px_rgba(212,175,55,0.3)] transition-all hover:translate-y-[-2px]">
-                {isGenerating ? <span className="animate-pulse">Renderizando...</span> : '📸 Iniciar Render'}
+              <button onClick={handleSimulate} disabled={isGenerating} className="w-full btn-gold py-6 rounded-3xl text-black font-bold uppercase text-[10px] tracking-[0.4em] shadow-[0_15px_40px_rgba(212,175,55,0.3)] transition-all">
+                {isGenerating ? <span className="animate-pulse">Calculando Look...</span> : '📸 Iniciar Render'}
               </button>
             </aside>
 
-            {/* Viewport del Monitor de Referencia */}
             <section className="lg:col-span-9 flex items-center justify-center p-6 lg:p-12 bg-[#010101] relative overflow-hidden">
               <div className="w-full h-full max-w-[430px] aspect-[9/16] relative bg-[#050505] rounded-[4.5rem] overflow-hidden shadow-[0_0_120px_rgba(0,0,0,1)] border border-white/10 flex flex-col group">
-                
                 <div className="flex-grow relative overflow-hidden bg-[#080808]">
                   {isGenerating ? (
                     <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-black/95 backdrop-blur-3xl p-12 text-center gap-10">
@@ -425,23 +424,19 @@ export default function App() {
                         <div className="absolute inset-0 flex items-center justify-center font-serif text-amber-500 text-4xl italic">G</div>
                       </div>
                       <div className="space-y-4">
-                        <p className="text-[11px] uppercase font-bold tracking-[0.5em] text-amber-500">Bloqueando Rasgos Faciales...</p>
-                        <p className="text-[9px] text-neutral-600 font-mono uppercase tracking-widest">Ajustando texturas al perfil de {currentUser?.username}</p>
-                        <p className="text-[8px] text-white/20 font-mono uppercase tracking-widest mt-6 animate-pulse">Sincronización de identidad: 100% segura</p>
+                        <p className="text-[11px] uppercase font-bold tracking-[0.5em] text-amber-500">Mapeando Identidad Master</p>
+                        <p className="text-[9px] text-neutral-600 font-mono uppercase tracking-widest italic">Ajustando cada píxel al perfil de {currentUser?.username}</p>
                       </div>
                     </div>
                   ) : currentView ? (
                     <div className="w-full h-full animate-in zoom-in-95 duration-1000 relative">
-                      <img src={currentView} className="w-full h-full object-cover" alt="Resultado de simulación" />
-                      
-                      {/* Marcas de Monitor Pro */}
+                      <img src={currentView} className="w-full h-full object-cover" alt="Resultado" />
                       <div className="absolute top-10 left-10 pointer-events-none opacity-50">
-                         <div className="text-[9px] font-mono text-white/60 mb-2">OUTPUT_STABLE: 4K</div>
-                         <div className="text-[8px] font-mono text-amber-500">LUT_PROFILE: GALA_CINEMA_V3</div>
+                         <div className="text-[9px] font-mono text-white/60 mb-2">OUTPUT: STABLE</div>
+                         <div className="text-[8px] font-mono text-amber-500 uppercase tracking-widest">LUT_PROFILE: GALA_PRO_V4</div>
                       </div>
-
                       <div className="absolute bottom-14 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-all translate-y-4 group-hover:translate-y-0">
-                        <button onClick={() => { const link = document.createElement('a'); link.href = currentView!; link.download = 'GalaVision_MasterCapture.png'; link.click(); }} className="px-12 py-5 bg-white text-black rounded-full text-[11px] font-bold uppercase tracking-[0.3em] shadow-[0_20px_40px_rgba(255,255,255,0.2)] hover:bg-amber-500 transition-colors">Descargar Master 8K</button>
+                        <button onClick={() => { const link = document.createElement('a'); link.href = currentView!; link.download = 'GalaVision_Master.png'; link.click(); }} className="px-12 py-5 bg-white text-black rounded-full text-[11px] font-bold uppercase tracking-[0.3em] shadow-2xl hover:bg-amber-500">Descargar HQ</button>
                       </div>
                     </div>
                   ) : (
@@ -449,27 +444,24 @@ export default function App() {
                       <div className="w-28 h-28 rounded-[3rem] bg-white/5 border border-white/10 flex items-center justify-center text-5xl shadow-inner animate-pulse">✨</div>
                       <div className="space-y-4">
                         <p className="text-[12px] text-neutral-400 uppercase tracking-[0.4em] font-bold">Monitor de Referencia</p>
-                        <p className="text-[10px] text-neutral-600 leading-relaxed max-w-[240px] uppercase font-bold tracking-widest">Selecciona un diseño y haz clic en Iniciar Render para ver tu look de gala personalizado conservando tu identidad.</p>
+                        <p className="text-[10px] text-neutral-600 leading-relaxed max-w-[240px] uppercase font-bold tracking-widest">Haz clic en Iniciar Render para ver tu transformación de gala personalizada.</p>
                       </div>
                     </div>
                   )}
                 </div>
 
-                {/* Footer de Monitor Técnica */}
                 <div className="h-20 bg-black border-t border-white/10 px-12 flex items-center justify-between shadow-2xl">
                    <div className="flex flex-col">
                       <span className="text-[12px] font-serif gold-text">{selectedFull?.name || 'Composición Digital'}</span>
-                      <span className="text-[8px] font-mono text-white/30 uppercase tracking-[0.3em]">REF: {MI_PERFIL.height} | {MI_PERFIL.skin} | IDENTITY_LOCK: ACTIVE</span>
+                      <span className="text-[8px] font-mono text-white/30 uppercase tracking-[0.3em]">ID_LOCK: ACTIVE // {currentUser?.username}</span>
                    </div>
                    <div className="flex gap-2.5">
                       <div className="w-2 h-2 rounded-full bg-amber-500/50" />
-                      <div className="w-2 h-2 rounded-full bg-white/10" />
-                      <div className="w-2 h-2 rounded-full bg-white/10" />
+                      <div className="w-2 h-2 rounded-full bg-white/10 animate-pulse" />
                    </div>
                 </div>
               </div>
               
-              {/* Cinematic Corner Accents */}
               <div className="absolute top-12 left-12 w-24 h-24 border-t-2 border-l-2 border-white/10 rounded-tl-[5rem] pointer-events-none" />
               <div className="absolute top-12 right-12 w-24 h-24 border-t-2 border-r-2 border-white/10 rounded-tr-[5rem] pointer-events-none" />
               <div className="absolute bottom-12 left-12 w-24 h-24 border-b-2 border-l-2 border-white/10 rounded-bl-[5rem] pointer-events-none" />

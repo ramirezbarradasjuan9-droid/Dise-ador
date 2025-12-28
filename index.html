@@ -15,7 +15,7 @@
         }
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #020202;
+            background-color: #010101;
             color: #f5f5f5;
             overflow-x: hidden;
         }
@@ -26,47 +26,36 @@
             -webkit-text-fill-color: transparent;
         }
         .glass {
-            background: rgba(10, 10, 10, 0.8);
-            backdrop-filter: blur(20px);
+            background: rgba(5, 5, 5, 0.85);
+            backdrop-filter: blur(25px);
             border: 1px solid rgba(255, 255, 255, 0.05);
-        }
-        /* Efecto de Página de Revista */
-        .magazine-page {
-            transition: all 0.8s cubic-bezier(0.645, 0.045, 0.355, 1);
-            transform-style: preserve-3d;
-        }
-        .page-flip-enter {
-            transform: rotateY(-90deg);
-            opacity: 0;
-        }
-        .page-flip-active {
-            transform: rotateY(0deg);
-            opacity: 1;
         }
         .btn-gold {
             background: linear-gradient(135deg, var(--gold) 0%, var(--gold-dark) 100%);
             color: black;
             font-weight: 700;
-            transition: all 0.4s ease;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
-        .btn-gold:hover {
-            transform: scale(1.05);
-            box-shadow: 0 0 25px rgba(212, 175, 55, 0.4);
+        .btn-gold:hover:not(:disabled) {
+            transform: scale(1.02) translateY(-2px);
+            box-shadow: 0 15px 35px rgba(212, 175, 55, 0.4);
         }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         
-        /* Animación de entrada de items del catálogo */
-        @keyframes itemFadeIn {
-            from { opacity: 0; transform: translateY(20px); }
+        @keyframes scan {
+            0% { top: 0%; opacity: 0; }
+            50% { opacity: 1; }
+            100% { top: 100%; opacity: 0; }
+        }
+        .animate-scan {
+            animation: scan 3s ease-in-out infinite;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
             to { opacity: 1; transform: translateY(0); }
         }
-        .stagger-item { animation: itemFadeIn 0.6s ease forwards; }
-
-        .magazine-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-            gap: 2rem;
-        }
+        .animate-fade { animation: fadeIn 0.8s ease forwards; }
     </style>
 <script type="importmap">
 {
