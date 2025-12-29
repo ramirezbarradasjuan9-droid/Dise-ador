@@ -14,7 +14,6 @@
             --gold-dark: #b8860b;
         }
         
-        /* Fix para 100vh en móviles */
         html, body {
             height: -webkit-fill-available;
             background-color: #010101;
@@ -61,23 +60,79 @@
 
         .no-scrollbar::-webkit-scrollbar { display: none; }
         
-        @keyframes scan {
-            0% { top: 0%; opacity: 0; }
-            50% { opacity: 0.5; }
-            100% { top: 100%; opacity: 0; }
+        @keyframes pop {
+            0% { transform: scale(0.95); opacity: 0.8; }
+            50% { transform: scale(1.05); opacity: 1; }
+            100% { transform: scale(1); opacity: 1; }
         }
-        .animate-scan {
-            animation: scan 3s linear infinite;
-        }
-
-        /* Estilos para que el scroll sea fluido en iOS */
-        .overflow-y-auto {
-            -webkit-overflow-scrolling: touch;
+        .animate-pop {
+            animation: pop 0.3s cubic-bezier(0.17, 0.67, 0.83, 0.67) forwards;
         }
 
-        /* Safe area para dispositivos con notch */
-        .safe-pb {
-            padding-bottom: env(safe-area-inset-bottom);
+        @keyframes gold-breathing {
+            0% { box-shadow: 0 0 5px rgba(212, 175, 55, 0.2); border-color: rgba(212, 175, 55, 0.3); }
+            50% { box-shadow: 0 0 20px rgba(212, 175, 55, 0.5); border-color: rgba(212, 175, 55, 0.8); }
+            100% { box-shadow: 0 0 5px rgba(212, 175, 55, 0.2); border-color: rgba(212, 175, 55, 0.3); }
+        }
+        .selected-breathing {
+            animation: gold-breathing 3s infinite ease-in-out;
+        }
+
+        @keyframes sparkle {
+            0% { transform: translate(0, 0) scale(0) rotate(0deg); opacity: 0; }
+            30% { opacity: 1; }
+            100% { transform: translate(var(--tx), var(--ty)) scale(1.5) rotate(180deg); opacity: 0; }
+        }
+        .sparkle-dot {
+            position: fixed;
+            width: 8px;
+            height: 8px;
+            background: var(--gold);
+            clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+            pointer-events: none;
+            z-index: 9999;
+            animation: sparkle 0.8s cubic-bezier(0.1, 0.8, 0.3, 1) forwards;
+        }
+
+        @keyframes float-up-confirm {
+            0% { transform: translateY(0); opacity: 0; }
+            20% { opacity: 1; }
+            100% { transform: translateY(-40px); opacity: 0; }
+        }
+        .float-confirm {
+            position: fixed;
+            color: var(--gold-light);
+            font-size: 10px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.2em;
+            pointer-events: none;
+            z-index: 10000;
+            text-shadow: 0 0 10px rgba(212, 175, 55, 0.5);
+            animation: float-up-confirm 1s ease-out forwards;
+            white-space: nowrap;
+        }
+
+        input[type=range] {
+            -webkit-appearance: none;
+            background: transparent;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 16px;
+            width: 16px;
+            border-radius: 50%;
+            background: var(--gold);
+            cursor: pointer;
+            box-shadow: 0 0 10px var(--gold);
+            margin-top: -6px;
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 4px;
+            cursor: pointer;
+            background: rgba(255,255,255,0.1);
+            border-radius: 2px;
         }
     </style>
 <script type="importmap">
