@@ -1,6 +1,6 @@
 {
-  "name": "Gala Vision: Simulador de Identidad",
-  "description": "Atelier digital avanzado que utiliza fotos de referencia para adaptar diseños de alta costura a características físicas específicas.",
+  "name": "Gala Vision: Master Cinema Studio",
+  "description": "Atelier digital de alta costura con control por voz y renderizado cinematográfico profesional.",
   "requestFramePermissions": [
     "camera",
     "microphone"
