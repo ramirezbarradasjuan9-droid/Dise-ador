@@ -25,18 +25,20 @@ export class GeminiService {
     let parts: any[] = [];
     let outfitPrompt = "";
 
-    const makeupPrompt = `MAKEUP: Applying ${makeup.eyeshadow} eyeshadow. LIPS: Using ${makeup.lipstick} lipstick with a ${makeup.lipstickFinish} finish texture (reflecting studio lights accordingly) and a ${makeup.lipContour} contour style. BLUSH: ${makeup.blush}. The makeup must look flawlessly integrated with the skin "${persona.skin}".`;
+    const makeupPrompt = `MAKEUP: Applying ${makeup.eyeshadow} eyeshadow. LIPS: Using ${makeup.lipstick} lipstick with a ${makeup.lipstickFinish} finish texture and a ${makeup.lipContour} contour style. BLUSH: ${makeup.blush}. The makeup must look flawlessly integrated with the skin "${persona.skin}".`;
 
     if (customClothingBase64) {
       // Escenario: El usuario subió su propia imagen de ropa
       const clothingImgData = customClothingBase64.includes(',') ? customClothingBase64.split(',')[1] : customClothingBase64;
       
       outfitPrompt = `
-        TASK: CLOTHING TRANSFER AND MAKEUP APPLICATION.
-        IMAGE 1: Reference person (identity, skin tone, build).
-        IMAGE 2: Reference clothing design.
-        INSTRUCTION: Apply the EXACT design, style, fabric texture, and details from the clothing in IMAGE 2 onto the person from IMAGE 1. 
-        CRITICAL: Change the fabric color of the garment to ${customColor}. Maintain all shadows and highlights but matching this exact hue.
+        TASK: FULL CLOTHING REPLACEMENT AND TRANSFER.
+        IMAGE 1: Reference person (identity, skin tone, body shape).
+        IMAGE 2: Target clothing design.
+        INSTRUCTION: COMPLETELY REMOVE the clothing currently worn by the person in IMAGE 1. 
+        REPLACE IT entirely with the EXACT design, fabric, and style from IMAGE 2. 
+        CRITICAL: There should be NO trace of the original clothes (jeans, shirts, etc.) from Image 1. Dress the person ONLY in the new garment.
+        COLOR ADJUSTMENT: Change the fabric color to exactly "${customColor}".
         ${makeupPrompt}
       `;
 
@@ -46,21 +48,21 @@ export class GeminiService {
     } else {
       // Escenario: El usuario usa el catálogo interno
       if (full) {
-        outfitPrompt = `un diseño completo llamado "${full.name}" (${full.basePrompt}) con la tela teñida exactamente en color "${customColor}"`;
+        outfitPrompt = `the full gown named "${full.name}" (${full.basePrompt}) dyed in "${customColor}" color.`;
       } else {
-        const topPart = top ? `${top.basePrompt} en color "${customColor}"` : "prenda superior actual";
-        const bottomPart = bottom ? `${bottom.basePrompt} en color "${customColor}"` : "prenda inferior actual";
-        outfitPrompt = `un conjunto coordinado de ${topPart} y ${bottomPart}`;
+        const topPart = top ? `${top.basePrompt} in color "${customColor}"` : "";
+        const bottomPart = bottom ? `${bottom.basePrompt} in color "${customColor}"` : "";
+        outfitPrompt = `a coordinated outfit consisting of ${topPart} and ${bottomPart}.`;
       }
 
       const prompt = `
-        PROFESSIONAL CINEMA STUDIO PHOTOGRAPHY:
-        1. COMPOSITION: Full body shot.
-        2. IDENTITY: Maintain exact facial features and skin "${persona.skin}" from the provided image.
-        3. OUTFIT: ${outfitPrompt}. The primary fabric color must be exactly ${customColor}.
+        PROFESSIONAL HIGH-FASHION STUDIO PHOTOGRAPHY:
+        1. MANDATORY: COMPLETELY REMOVE AND REPLACE the original clothing worn by the person in the reference photo. 
+        2. OUTFIT: Dress the person EXCLUSIVELY in ${outfitPrompt}. No original clothes (like jeans or t-shirts) should be visible underneath or anywhere.
+        3. IDENTITY: Maintain the exact facial identity and skin tone "${persona.skin}" from the provided photo.
         4. MAKEUP: ${makeupPrompt}
         5. VIEWPORT: ${angle} view, ${pose} pose.
-        6. QUALITY: 8k resolution, photorealistic, high fashion magazine style.
+        6. QUALITY: 8k resolution, cinematic lighting, photorealistic.
       `;
 
       parts.push({ text: prompt });
