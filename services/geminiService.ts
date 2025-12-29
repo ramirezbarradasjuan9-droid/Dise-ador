@@ -21,27 +21,35 @@ export class GeminiService {
 
     let outfitDescription = "";
     if (full) {
-      outfitDescription = `un vestido de gala espectacular llamado "${full.name}" (${full.basePrompt}) en color ${customColor}`;
+      outfitDescription = `un diseño completo llamado "${full.name}" (${full.basePrompt}) en color ${customColor}`;
     } else {
-      const topPart = top ? `${top.basePrompt} en color ${customColor}` : "su prenda superior actual";
-      const bottomPart = bottom ? `${bottom.basePrompt} en color ${customColor}` : "su prenda inferior actual";
-      outfitDescription = `un conjunto de gala coordinado de ${topPart} y ${bottomPart}`;
+      const topPart = top ? `${top.basePrompt} en color ${customColor}` : "prenda superior actual";
+      const bottomPart = bottom ? `${bottom.basePrompt} en color ${customColor}` : "prenda inferior actual";
+      outfitDescription = `un conjunto coordinado de ${topPart} y ${bottomPart}`;
     }
 
-    const accessoriesText = accessories.length > 0 
-      ? `Accesorios: ${accessories.map(a => a.name).join(', ')}.`
-      : "Sin accesorios adicionales.";
+    // Filtrado inteligente de accesorios
+    const sunglasses = accessories.find(a => a.subCategory === 'Lentes');
+    const jewelry = accessories.filter(a => a.subCategory === 'Joyas');
+    const otherAcc = accessories.filter(a => a.subCategory !== 'Lentes' && a.subCategory !== 'Joyas');
+
+    const accessoriesText = `
+      ACCESORIOS DETALLADOS:
+      ${sunglasses ? `- Gafas: La persona debe estar usando ${sunglasses.basePrompt}.` : "- Rostro despejado, sin gafas."}
+      ${jewelry.length > 0 ? `- Joyería: ${jewelry.map(j => j.basePrompt).join(', ')}.` : ""}
+      ${otherAcc.length > 0 ? `- Complementos: ${otherAcc.map(o => o.basePrompt).join(', ')}.` : ""}
+    `;
 
     const prompt = `
       PROFESSIONAL CINEMA STUDIO PHOTOGRAPHY:
-      1. COMPOSITION: **FULL BODY SHOT** from a considerable distance to show the entire outfit and silhouette from head to toe.
+      1. COMPOSITION: **FULL BODY SHOT** or **MEDIUM SHOT** ensuring facial accessories are visible.
       2. REFERENCE: Identity of the person from image: skin "${persona.skin}", build "${persona.build}".
       3. OUTFIT: ${outfitDescription}. 
-      4. STYLE: ${accessoriesText}. Face: ${makeup.eyeshadow} eyeshadow, ${makeup.lipstick} lipstick.
-      5. VIEWPORT: ${angle} view, ${pose} pose.
-      6. LIGHTING: ${lighting}, dramatic rim lighting, soft box fill, high contrast.
-      7. QUALITY: 8k resolution, photorealistic, blurred studio background, anamorphic lens quality.
-      8. PERSPECTIVE: Ensure the entire person is visible in the frame, no cropping of feet or head.
+      4. ACCESSORIES: ${accessoriesText}
+      5. FACE: ${makeup.eyeshadow} eyeshadow, ${makeup.lipstick} lipstick. Ensure the face identity matches the reference image exactly.
+      6. VIEWPORT: ${angle} view, ${pose} pose.
+      7. LIGHTING: ${lighting}, dramatic rim lighting, soft box fill, high contrast.
+      8. QUALITY: 8k resolution, photorealistic, blurred high-end studio background.
     `;
 
     try {
